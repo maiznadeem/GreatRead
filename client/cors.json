@@ -1,6 +1,6 @@
 [
     {
-      "origin": ["http://localhost:5173", "https://greatread.projects.himaiz.com", "https://great-read-maiz.vercel.app", "https://great-read-dev.vercel.app"],
+      "origin": ["https://greatread.himaiz.com", "https://great-read-maiz.vercel.app", "https://great-read-dev.vercel.app", "http://localhost:5173"],
       "method": ["GET"],
       "responseHeader": ["Content-Type"],
       "maxAgeSeconds": 3600

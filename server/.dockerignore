@@ -1,8 +1,10 @@
 node_modules
 npm-debug.log
-app.yaml
-dispatch.yaml
 .git
 .gitignore
-yarn-error.log
-yarn.lock
+.env
+.env.*
+.cloudrun-env.yaml
+service-account.json
+controllers/service-account.json
+deploy.sh

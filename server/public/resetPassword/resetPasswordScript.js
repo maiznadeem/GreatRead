@@ -10,6 +10,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const password = document.getElementById('password').value;
 
+        if (password.length < 8) {
+            resetMessage.textContent = 'Password must be at least 8 characters.';
+            return;
+        }
+
         try {
             const response = await fetch('/reset/resetPassword', {
                 method: 'POST',
@@ -22,13 +27,13 @@ document.addEventListener('DOMContentLoaded', function () {
             const jsonResponse = await response.json();
 
             if (response.status === 200) {
-                resetMessage.innerHTML = jsonResponse.message;
+                resetMessage.textContent = jsonResponse.message;
             } else {
-                resetMessage.innerHTML = `An error occurred: ${jsonResponse.message}`;
+                resetMessage.textContent = jsonResponse.message || jsonResponse.error || 'An error occurred. Please try again.';
             }
         } catch (error) {
             console.error(error);
-            resetMessage.innerHTML = 'An error occurred. Please try again.';
+            resetMessage.textContent = 'An error occurred. Please try again.';
         }
     });
 });

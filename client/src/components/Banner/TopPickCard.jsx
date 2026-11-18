@@ -30,6 +30,7 @@ function TopPickCard({ book }) {
             { !isImageLoaded && <Skeleton variant="rectangular" width={170} height={270} className='absolute inset-0' sx={{ bgcolor: '#f0f0f0' }} animation="wave" /> }
             <img
                 src={book.image}
+                alt={book.title}
                 style={{ objectFit: "cover" }}
                 onLoad={() => setIsImageLoaded(true)}
             />

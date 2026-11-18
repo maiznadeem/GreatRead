@@ -43,7 +43,7 @@ const Header = () => {
     };
 
     const handleReadingListClick = () => {
-        if (window.location.pathname === "/notes") {
+        if (location.pathname === "/notes") {
             history("/");
             if(!isReadingListActive) {
                 toggleReadingList();

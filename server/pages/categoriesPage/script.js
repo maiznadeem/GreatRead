@@ -127,7 +127,7 @@ document.addEventListener('DOMContentLoaded', function () {
         categorySearchButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching...';
 
         const searchTerm = categorySearchInput.value;
-        fetch(`/admin/searchcategory?term=${searchTerm}`)
+        fetch(`/admin/searchcategory?term=${encodeURIComponent(searchTerm)}`)
             .then((response) => {
                 if (response.status === 200) {
                     return response.json();
@@ -141,7 +141,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     data.forEach((category) => {
                         const categoryItem = document.createElement('div');
                         categoryItem.classList.add('category-item');
-                        categoryItem.innerHTML = `<p><strong>ID:</strong> ${category._id}<br><strong>Name:</strong> ${category.name}</p>`;
+                        const details = document.createElement('p');
+                        const idLabel = document.createElement('strong');
+                        idLabel.textContent = 'ID:';
+                        const nameLabel = document.createElement('strong');
+                        nameLabel.textContent = 'Name:';
+                        details.append(idLabel, ` ${category._id}`, document.createElement('br'), nameLabel, ` ${category.name}`);
+                        categoryItem.appendChild(details);
                         categorySearchResults.appendChild(categoryItem);
                     });
                 } else {

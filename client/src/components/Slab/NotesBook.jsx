@@ -47,6 +47,7 @@ const NotesBook = ({ book, categories }) => {
                 >
                     <img
                         src={matchingCategory.image}
+                        alt={`${matchingCategory.name} category`}
                         onClick={() => setShowTooltips(prevState => [...prevState.slice(0, index), !prevState[index], ...prevState.slice(index + 1)])}
                         className="w-auto h-6 cursor-pointer"
                     />
@@ -100,6 +101,7 @@ const NotesBook = ({ book, categories }) => {
                     {isBookInReadingList ? (
                         <img 
                             src={remove}
+                            alt={`Remove ${book.title} from list`}
                             className='h-8 w-8 absolute top-[-15px] right-[-15px] cursor-pointer'
                             onClick={() => {
                                 if (urls.address.length == 0 && !urlsLoading)
@@ -110,6 +112,7 @@ const NotesBook = ({ book, categories }) => {
                         notesBooks.length < total && (
                             <img 
                                 src={add}
+                                alt={`Add ${book.title} to list`}
                                 className='h-8 w-8 absolute top-[-15px] right-[-15px] cursor-pointer'
                                 onClick={() => {
                                     if (urls.address.length == 0 && !urlsLoading)

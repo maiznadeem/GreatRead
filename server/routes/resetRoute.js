@@ -1,58 +1,33 @@
-const {
-    signup,
-    requestPasswordReset,
-    resetPassword,
-} = require("../services/authService");
-  
-const signUpController = async (req, res, next) => {
-    const signupService = await signup(req.body);
-    return res.json(signupService);
-};
+const express = require("express");
+const { requestPasswordReset, resetPassword } = require("../services/authService");
+const { resetLimiter } = require("../utils/rateLimiters");
 
-const resetPasswordRequestController = async (req, res, next) => {
-    try {
-        const port = req.app.get('port');
-        const requestPasswordResetService = await requestPasswordReset(
-            req.body.email,
-            req.protocol, req.hostname, port
-        );
-        return res.json(requestPasswordResetService);
-    } catch (error) {
-        if (error.message === "Email does not exist") {
-            return res.status(400).json({ message: "Email does not exist" });
-        } else {
-            console.error(error.message);
-            return res.status(500).json({ error: "An error occurred" });
-        }
+const resetRoute = express.Router();
+
+const GENERIC_MESSAGE = "If an account exists for that email, a password reset link has been sent.";
+
+resetRoute.post("/requestResetPassword", resetLimiter, async (req, res) => {
+    const { email } = req.body;
+    if (typeof email !== "string" || !email || email.length > 254) {
+        return res.status(400).json({ message: "Please enter a valid email." });
     }
-};
-
-const resetPasswordController = async (req, res, next) => {
+    // Awaited: Cloud Run throttles CPU after the response, so a background send might never finish.
     try {
-        const resetPasswordService = await resetPassword(
-            req.body.userId,
-            req.body.token,
-            req.body.password
-        );
-        return res.json(resetPasswordService);
+        await requestPasswordReset(email);
     } catch (error) {
-        console.error(error.message);
-        return res.status(500).json({ error: "The Link has expired. Please request a new one." });
+        console.error("Error requesting password reset:", error.message);
     }
-};
-
-const resetRoute = require("express").Router();
-
-const path = require('path');
-
-resetRoute.post("/requestResetPassword", resetPasswordRequestController);
-resetRoute.post("/resetPassword", resetPasswordController);
-resetRoute.get("/passwordReset", (req, res) => {
-    const token = req.query.token;
-    const userId = req.query.id;
-    const filePath = path.join(__dirname, '..', 'public', 'authpage', 'resetPassword.html');
-    res.sendFile(filePath);
+    return res.json({ message: GENERIC_MESSAGE });
 });
 
+resetRoute.post("/resetPassword", resetLimiter, async (req, res) => {
+    try {
+        return res.json(await resetPassword(req.body.userId, req.body.token, req.body.password));
+    } catch (error) {
+        if (error.status === 400) return res.status(400).json({ message: error.message });
+        console.error("Error resetting password:", error.message);
+        return res.status(500).json({ message: "An error occurred. Please try again." });
+    }
+});
 
 module.exports = { resetRoute };

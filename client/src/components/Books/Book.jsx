@@ -30,6 +30,7 @@ const CategoryIcon = ({ category, categories }) => {
         >
             <img
                 src={matchingCategory.image}
+                alt={`${matchingCategory.name} category`}
                 onClick={() => setshowtooltip(!showtooltip)}
                 className="w-auto h-6 cursor-pointer"
             />
@@ -101,6 +102,7 @@ const Book = ({ book, categories }) => {
                         {isBookInReadingList ? (
                             <img 
                                 src={remove}
+                                alt={`Remove ${book.title} from list`}
                                 className='h-8 w-8 absolute top-[-15px] right-[-15px] cursor-pointer'
                                 onClick={() => {
                                     updateBooksValue(books.filter((readingBook) => readingBook._id !== book._id));
@@ -111,6 +113,7 @@ const Book = ({ book, categories }) => {
                             books.length < goal && (
                                 <img 
                                     src={add}
+                                    alt={`Add ${book.title} to list`}
                                     className='h-8 w-8 absolute top-[-15px] right-[-15px] cursor-pointer'
                                     onClick={() => {
                                         updateBooksValue([...books, book]);
