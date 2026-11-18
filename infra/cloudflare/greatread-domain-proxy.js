@@ -11,12 +11,6 @@ const TARGETS = {
   [API_HOST]: "https://great-read-image-1017210667439.us-central1.run.app",
 };
 
-// Old hostnames (before the move to *.greatread.himaiz.com) and where they now live.
-const LEGACY_HOSTS = {
-  "greatread.projects.himaiz.com": CLIENT_HOST,
-  "admin.greatread.projects.himaiz.com": API_HOST,
-};
-
 const ALLOWED_API_ORIGINS = new Set([
   `https://${CLIENT_HOST}`,
   "https://great-read-maiz.vercel.app",
@@ -30,19 +24,7 @@ addEventListener("fetch", (event) => {
 
 async function handleRequest(request) {
   const url = new URL(request.url);
-  let hostname = url.hostname.toLowerCase();
-
-  const newHost = LEGACY_HOSTS[hostname];
-  if (newHost) {
-    // Browsers navigating the old domains are moved permanently. API calls (XHR, Stripe, scripts)
-    // on the old admin host keep being proxied, because CORS preflights cannot follow redirects.
-    const isNavigation = ["GET", "HEAD"].includes(request.method) &&
-      (request.headers.get("Accept") || "").includes("text/html");
-    if (newHost === CLIENT_HOST || isNavigation) {
-      return Response.redirect(`https://${newHost}${url.pathname}${url.search}`, 301);
-    }
-    hostname = newHost;
-  }
+  const hostname = url.hostname.toLowerCase();
 
   const targetOrigin = TARGETS[hostname];
   if (!targetOrigin) {
