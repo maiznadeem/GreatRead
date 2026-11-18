@@ -13,6 +13,7 @@ const session = require('express-session');
 const { MongoStore } = require('connect-mongo');
 const cors = require('cors');
 const path = require('path');
+const crypto = require('crypto');
 
 const { adminRoute } = require('./routes/adminRoute');
 const { loginRoute } = require('./routes/loginRoute');
@@ -26,6 +27,17 @@ const app = express();
 
 // Two proxies sit in front of the app (Cloudflare Worker, then Google's front end), so trust exactly two hops.
 app.set('trust proxy', 2);
+
+// In production only the Cloudflare Worker may reach the app: it sends PROXY_SECRET in X-Proxy-Secret.
+// This also makes the Worker-set cf-connecting-ip header trustworthy for rate limiting.
+const proxySecret = process.env.PROXY_SECRET && Buffer.from(process.env.PROXY_SECRET);
+if (proxySecret) {
+    app.use((req, res, next) => {
+        const sent = Buffer.from(req.get('x-proxy-secret') || '');
+        if (sent.length === proxySecret.length && crypto.timingSafeEqual(sent, proxySecret)) return next();
+        res.status(403).send('Forbidden');
+    });
+}
 
 // Stripe needs the raw body to verify the signature, so this must come before express.json().
 app.post('/webhooks/stripe', express.raw({ type: 'application/json' }), stripeWebhook);
