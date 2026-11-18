@@ -14,7 +14,7 @@
 |---|---|---|
 | Frontend (React + Vite) | `client/` | Vercel project `great-read` (`great-read-maiz.vercel.app`) |
 | API + admin pages (Express) | `server/` | Cloud Run service `great-read-image`, project `great-read-398408`, `us-central1` |
-| Public hostnames | `infra/cloudflare/greatread-domain-proxy.js` | Cloudflare Worker `greatread-domain-proxy` with custom domains on `himaiz.com` |
+| DNS | — | Cloudflare (`himaiz.com`), DNS only: `greatread` → Vercel, `admin.greatread` → Cloud Run domain mapping |
 
 Integrations: MongoDB Atlas, Stripe Checkout + webhook (`/webhooks/stripe`), Google Cloud Storage
 (`great-read-bucket` for public images, `great-read-purchase` for paid downloads via signed URLs),
@@ -29,12 +29,12 @@ GroupDocs Conversion Cloud (docx to PDF) and Gmail SMTP for password-reset email
   Build and runs as `great-read-service@great-read-398408.iam.gserviceaccount.com`, which also signs
   GCS URLs. Runtime config comes from the gitignored `server/.cloudrun-env.yaml`:
   `CLIENT_URL`, `SERVER_URL`, `MONGO_DB_URL`, `SESSION_SECRET`, `BCRYPT_SALT`, `EMAIL_USER`, `EMAIL_PASS`,
-  `GROUPDOCS_CLIENT_ID`, `GROUPDOCS_CLIENT_SECRET`, `STRIPE_PRIVATE_KEY`, `STRIPE_WEBHOOK_SECRET`,
-  `PROXY_SECRET` (optional: `ALLOWED_ORIGINS`, `GCS_BUCKET`, `GCS_PURCHASE_BUCKET`).
-- **Worker:** upload `infra/cloudflare/greatread-domain-proxy.js` to the `greatread-domain-proxy` Worker
-  (dashboard or Workers API), keeping its `PROXY_SECRET` secret binding equal to the server's. With
-  `PROXY_SECRET` set, the server answers 403 to anything that does not come through the Worker. The Stripe webhook endpoint points at
-  `https://admin.greatread.himaiz.com/webhooks/stripe`.
+  `GROUPDOCS_CLIENT_ID`, `GROUPDOCS_CLIENT_SECRET`, `STRIPE_PRIVATE_KEY`, `STRIPE_WEBHOOK_SECRET`
+  (optional: `ALLOWED_ORIGINS`, `GCS_BUCKET`, `GCS_PURCHASE_BUCKET`).
+- **Custom domains:** `greatread.himaiz.com` is a domain on the Vercel project (Cloudflare CNAME to Vercel,
+  DNS only). `admin.greatread.himaiz.com` is a Cloud Run domain mapping (Cloudflare CNAME to
+  `ghs.googlehosted.com`, DNS only; `himaiz.com` is verified in Search Console for the deploying account).
+  The Stripe webhook endpoint points at `https://admin.greatread.himaiz.com/webhooks/stripe`.
 - **Bucket CORS:** `gcloud storage buckets update gs://great-read-bucket --cors-file=client/cors.json`.
 
 ## Local development
