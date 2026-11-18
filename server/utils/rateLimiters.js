@@ -1,13 +1,14 @@
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 
-// Behind Cloudflare the real client IP is in cf-connecting-ip.
+// The Worker puts the visitor's IP in X-Client-IP (CF-Connecting-IP on its subrequests is the Worker's
+// own address). It can be trusted because index.js rejects requests without the Worker's PROXY_SECRET.
 const limiter = (windowMinutes, limit, message) =>
     rateLimit({
         windowMs: windowMinutes * 60 * 1000,
         limit,
         standardHeaders: 'draft-7',
         legacyHeaders: false,
-        keyGenerator: (req) => ipKeyGenerator(req.headers['cf-connecting-ip'] || req.ip),
+        keyGenerator: (req) => ipKeyGenerator(req.get('x-client-ip') || req.ip),
         handler: (req, res) => res.status(429).json({ error: message, message }),
     });
 
