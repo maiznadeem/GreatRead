@@ -8,8 +8,6 @@
 - **Backend (API + admin):** [https://admin.greatread.himaiz.com/](https://admin.greatread.himaiz.com/)
 - **Development:** [https://great-read-dev.vercel.app/](https://great-read-dev.vercel.app/)
 
-The old `greatread.projects.himaiz.com` hostnames redirect to the ones above.
-
 ## Architecture
 
 | Part | Code | Hosting |
