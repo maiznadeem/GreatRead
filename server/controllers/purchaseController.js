@@ -6,6 +6,7 @@ const stripe = require("../utils/stripe");
 const { storage, PURCHASE_BUCKET } = require("../utils/storage");
 const { toBookIds, isStringArray } = require("../utils/validate");
 const Book = require("../models/Book");
+const Category = require("../models/Category");
 const Payment = require("../models/Payment");
 
 const { convert } = require("./convertToPDF");
@@ -52,7 +53,17 @@ const authorizePurchase = async (req, res) => {
     }
 
     try {
-        if (await Book.countDocuments({ _id: { $in: order.bookIds } }) !== order.bookIds.length) {
+        // Tiers 1-2 are priced per category: the categories must exist and every book must belong to one.
+        const restricted = order.tier.maxCategories < TIERS[3].maxCategories;
+        const bookFilter = { _id: { $in: order.bookIds } };
+        if (restricted) {
+            const known = await Category.countDocuments({ name: { $in: order.notesCategories } });
+            if (known !== order.notesCategories.length) {
+                return res.status(400).json({ error: "Invalid purchase request." });
+            }
+            bookFilter.categories = { $in: order.notesCategories };
+        }
+        if (await Book.countDocuments(bookFilter) !== order.bookIds.length) {
             return res.status(400).json({ error: "Invalid purchase request." });
         }
 
