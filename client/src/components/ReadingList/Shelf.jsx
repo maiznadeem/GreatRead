@@ -11,6 +11,7 @@ import CategoryStep from "./StepperContent/CategoryStep";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import LinkedInIcon from "@mui/icons-material/LinkedIn";
 import PDFModal from "./PDF/PDFModal";
+import { SITE_URL } from "../../config";
 
 const spring = { type: "spring", stiffness: 260, damping: 30 };
 
@@ -117,7 +118,7 @@ const Shelf = forwardRef(function Shelf(props, ref) {
     const isStart = page === 0;
     const isEnd = page >= pageCount - 1;
 
-    const shareUrl = "https://greatread.projects.himaiz.com";
+    const shareUrl = SITE_URL;
     const plural = books.length > 1 ? `${books.length} books` : `1 book`;
     const postDescription =
         `I made a reading goal of ${plural} for ${period} on Great Read!\nCreate yours at: ${shareUrl}\n` +
@@ -212,12 +213,13 @@ const Shelf = forwardRef(function Shelf(props, ref) {
                                                     <div className="relative mt-[8px] mr-[8px]">
                                                         <img
                                                             src={remove}
+                                                            alt={`Remove ${book.title} from list`}
                                                             className="h-4 w-4 absolute top-[-6px] right-[-6px] cursor-pointer"
                                                             onClick={() => removeBook(book._id)}
                                                         />
                                                         <img
                                                             src={book.image}
-                                                            alt=""
+                                                            alt={book.title}
                                                             className="w-24 rounded-md shadow-md h-36 object-cover cursor-pointer"
                                                             onClick={() => removeBook(book._id)}
                                                         />

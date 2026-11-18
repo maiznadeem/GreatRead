@@ -11,6 +11,7 @@ const Slab = () => {
     const { previewOptions, selectedButton, notesBooks, setNotesBooks, urls, setUrls, urlsLoading, setUrlsLoading, notesCategories } = useNotes();
     const [open, setOpen] = useState(false);
     const [expireOpen, setExpireOpen] = useState(false);
+    const [purchaseError, setPurchaseError] = useState('');
 
     let total = 10;
     let categories = 1;
@@ -51,20 +52,29 @@ const Slab = () => {
             return;
         }
         setUrlsLoading(true);
-        await purchaseBooksAPI(previewOptions, notesBooks, selectedButton, notesCategories)
-            .then((response) => {
-                const url = response?.url;
-                window.location.href = url;
-            })
-            .catch((error) => {
-                console.error('Error handling file download:', error);
-                setUrlsLoading(false);
-            });
+        setPurchaseError('');
+        try {
+            const response = await purchaseBooksAPI(previewOptions, notesBooks, selectedButton, notesCategories);
+            if (!response?.url) {
+                throw new Error("We couldn't start checkout. Please try again.");
+            }
+            window.location.href = response.url;
+        } catch (error) {
+            console.error('Error starting checkout:', error);
+            setPurchaseError(
+                error.status === 400 || error.status === 429
+                    ? error.message
+                    : "We couldn't start checkout. Please try again."
+            );
+            setUrlsLoading(false);
+        }
     }
 
     const handleDownload = (num) => {
-        const expirationInterval = 90 * 60 * 1000;
-        const isExpired = Date.now() - urls?.timeCreated > expirationInterval;
+        // timeCreated is urlsGeneratedAt (falling back to createdAt); signed URLs last 1 hour.
+        const expirationInterval = 60 * 60 * 1000;
+        const generatedAt = new Date(urls?.timeCreated).getTime();
+        const isExpired = Number.isNaN(generatedAt) || Date.now() - generatedAt > expirationInterval;
 
         if (urls.address && urls.address.length > 0 && !isExpired) {
             const downloadUrl = urls.address;
@@ -93,7 +103,7 @@ const Slab = () => {
                             <div key={book._id} className="w-32 h-48 rounded-lg overflow-hidden shadow-lg">
                                 <img
                                     src={book.image}
-                                    alt="Book"
+                                    alt={book.title}
                                     className="w-full h-full object-cover cursor-pointer"
                                     onClick={() => {
                                         if (urls.address && urls.address.length == 0 && !urlsLoading)
@@ -187,6 +197,7 @@ const Slab = () => {
                 >
                     {urls.address && urls.address.length > 0 ? "Purchase more" : "Purchase"} 
                 </Button>
+                {purchaseError && <p role="alert" className="text-red-600">{purchaseError}</p>}
                 {
                     urls.address && urls.address.length > 0 && 
                     <p>Warning: Select purchase more if you have downloaded previous documents.</p>

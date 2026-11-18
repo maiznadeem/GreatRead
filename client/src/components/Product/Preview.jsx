@@ -19,10 +19,10 @@ const Preview = ({ previewOptions, setPreviewOptions }) => {
                                 <div className='flex gap-5'>
                                     <div className='flex flex-col gap-2'>
                                         <div className='w-16 h-auto mb-4'>
-                                            <img src={Logo} className='h-full w-full object-cover' />
+                                            <img src={Logo} alt="Great Read logo" className='h-full w-full object-cover' />
                                         </div>
                                         <div className='w-28 h-auto'>
-                                            <img src={HyperLearning} className='h-full w-full object-cover' />
+                                            <img src={HyperLearning} alt="Sample book cover" className='h-full w-full object-cover' />
                                         </div>
                                         { previewOptions.label &&
                                             <div className='text-white manrope-semibold text-[8px] text-center w-full flex flex-col gap-1'>
@@ -38,10 +38,12 @@ const Preview = ({ previewOptions, setPreviewOptions }) => {
                                             <div className="flex space-x-2 px-2 justify-center items-center">
                                                 <img
                                                     src={amazonIcon}
+                                                    alt="Amazon"
                                                     className="w-1/2 h-auto cursor-pointer"
                                                 />
                                                 <img
                                                     src={perlegoIcon}
+                                                    alt="Perlego"
                                                     className="w-1/2 h-auto cursor-pointer"
                                                 />
                                             </div>

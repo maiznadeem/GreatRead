@@ -1,8 +1,21 @@
 import axios from "axios";
+import { API_BASE_URL } from "../config";
 
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL || "https://admin.greatread.projects.himaiz.com",
+    baseURL: API_BASE_URL,
 });
+
+// Wraps an axios error, keeping the server's message and the HTTP status.
+function toApiError(fallback, error) {
+    const data = error.response?.data;
+    const serverMessage =
+        data?.error || data?.message || (typeof data === "string" ? data : null);
+    const apiError = new Error(serverMessage || `${fallback}: ${error.message}`);
+    apiError.status = error.response?.status;
+    apiError.data = data;
+    apiError.cause = error;
+    return apiError;
+}
 
 export async function getBooks(offset, limit, categories, searchTerm) {
     try {
@@ -15,7 +28,7 @@ export async function getBooks(offset, limit, categories, searchTerm) {
         const response = await api.post("/get/books", requestData);
         return response.data;
     } catch (error) {
-        throw new Error(`Failed to fetch books: ${error.message}`);
+        throw toApiError("Failed to fetch books", error);
     }
 }
 
@@ -24,7 +37,7 @@ export async function getTopPicks() {
         const response = await api.get("/get/toppicks");
         return response.data;
     } catch (error) {
-        throw new Error(`Failed to fetch top picks: ${error.message}`);
+        throw toApiError("Failed to fetch top picks", error);
     }
 }
 
@@ -33,7 +46,7 @@ export async function getCategories() {
         const response = await api.get("/get/categories");
         return response.data;
     } catch (error) {
-        throw new Error(`Failed to fetch categories: ${error.message}`);
+        throw toApiError("Failed to fetch categories", error);
     }
 }
 
@@ -46,7 +59,7 @@ export async function getRandomBooks(categories, goal, books) {
         });
         return response.data;
     } catch (error) {
-        throw new Error(`Failed to fetch random books: ${error.message}`);
+        throw toApiError("Failed to fetch random books", error);
     }
 }
 
@@ -65,7 +78,7 @@ export async function purchaseBooksAPI(
         });
         return response.data;
     } catch (error) {
-        throw new Error(`Failed to fetch signed URLs: ${error}`);
+        throw toApiError("Failed to start checkout", error);
     }
 }
 
@@ -76,7 +89,7 @@ export async function getPaymentDetails(sessionId) {
         });
         return response.data;
     } catch (error) {
-        throw new Error(`Failed to fetch payment details: ${error}`);
+        throw toApiError("Failed to fetch payment details", error);
     }
 }
 
