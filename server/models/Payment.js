@@ -33,6 +33,12 @@ const paymentSchema = new mongoose.Schema({
     urls: [{
         type: String,
     }],
+    urlsGeneratedAt: {
+        type: Date,
+    },
+    generatingAt: {
+        type: Date,
+    },
     fetchedBefore: {
         type: Boolean,
         default: false,

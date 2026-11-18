@@ -1,21 +1,52 @@
-const { Storage } = require('@google-cloud/storage');
 const { v4: uuidv4 } = require('uuid');
-const path = require('path');
-const { validationResult } = require('express-validator');
 
-const storage = new Storage({
-    keyFilename: path.join(__dirname, 'service-account.json'),
-});
-
+const { storage, BOOKS_BUCKET } = require('../utils/storage');
+const { escapeRegex, isObjectId, isStringArray } = require('../utils/validate');
 const Book = require('../models/Book');
 const TopPicks = require('../models/TopPicks');
 const Category = require('../models/Category');
 const Note = require('../models/Note');
 
+const IMAGE_EXTENSIONS = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+    'image/gif': 'gif',
+};
+const MAX_SEARCH_LENGTH = 100;
+const PUBLIC_URL_PREFIX = `https://storage.googleapis.com/${BOOKS_BUCKET}/`;
+
+// Stores an uploaded image under a generated name (never the client's filename) and returns its public URL.
+async function saveImage(file, folderName) {
+    const objectName = `${folderName}/${uuidv4()}.${IMAGE_EXTENSIONS[file.mimetype]}`;
+    await storage.bucket(BOOKS_BUCKET).file(objectName).save(file.buffer, { contentType: file.mimetype });
+    return PUBLIC_URL_PREFIX + objectName;
+}
+
+async function deleteImage(imageUrl) {
+    if (imageUrl && imageUrl.startsWith(PUBLIC_URL_PREFIX)) {
+        await storage.bucket(BOOKS_BUCKET).file(imageUrl.slice(PUBLIC_URL_PREFIX.length)).delete({ ignoreNotFound: true });
+    }
+}
+
+const parseCategories = (value) => {
+    try {
+        const categories = typeof value === 'string' ? JSON.parse(value) : value;
+        return isStringArray(categories) ? categories : null;
+    } catch {
+        return null;
+    }
+};
+
+const searchRegex = (term) => ({ $regex: escapeRegex(term.slice(0, MAX_SEARCH_LENGTH)), $options: 'i' });
+
 const checkDuplicateTitle = async (req, res, next) => {
     try {
         const title = req.body.title;
-        const existingBook = await Book.findOne({ title: { $regex: new RegExp('^' + title + '$', 'i') } });
+        if (typeof title !== 'string' || !title || title.length > 300) {
+            return res.status(400).json({ error: 'A valid title is required.' });
+        }
+        const existingBook = await Book.findOne({ title: { $regex: `^${escapeRegex(title)}$`, $options: 'i' } });
         if (existingBook) {
             return res.status(409).json({
                 error: 'Book with the same title already exists. Do you want to proceed with the upload?',
@@ -37,19 +68,7 @@ async function uploadBook(req, res) {
             return res.status(400).json({ error: 'No file uploaded.' });
         }
 
-        const bucketName = 'great-read-bucket';
-        const folderName = 'books';
-        const uniqueIdentifier = uuidv4();
-        const objectName = folderName + '/' + uniqueIdentifier + '-' + req.file.originalname;
-
-        const bucket = storage.bucket(bucketName);
-        const file = bucket.file(objectName);
-
-        await file.save(req.file.buffer, {
-            contentType: req.file.mimetype,
-        });
-
-        const publicUrl = `https://storage.googleapis.com/${bucketName}/${objectName}`;
+        const image = await saveImage(req.file, 'books');
 
         const newBook = new Book({
             title: req.body.title,
@@ -59,9 +78,9 @@ async function uploadBook(req, res) {
             amazon: req.body.amazon,
             perlego: req.body.perlego,
             quote: req.body.quote,
-            image: publicUrl,
+            image,
         });
-        
+
         const newNote = new Note({
             content: req.body.notesArray,
         });
@@ -78,6 +97,9 @@ async function uploadBook(req, res) {
 
 async function getBook(req, res) {
     const bookId = req.params.id;
+    if (!isObjectId(bookId)) {
+        return res.status(400).json({ error: 'Invalid book id.' });
+    }
     try {
         const book = await Book.findById(bookId).populate('notes');
         if (book) {
@@ -92,37 +114,21 @@ async function getBook(req, res) {
 }
 
 async function updateBook(req, res) {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+    const bookId = req.body.bookId;
+    const categories = parseCategories(req.body.categories);
+    if (!isObjectId(bookId) || !categories) {
+        return res.status(400).json({ error: 'Invalid book id or categories.' });
     }
     try {
-        const bookId = req.body.bookId;
         const existingBook = await Book.findById(bookId);
         if (!existingBook) {
             return res.status(404).json({ error: 'Book not found.' });
         }
         let imageUrl = existingBook.image;
         if (req.file) {
-            const bucketName = 'great-read-bucket';
-            if (imageUrl) {
-                const objectName = imageUrl.replace(`https://storage.googleapis.com/${bucketName}/`, '');
-                const bucket = storage.bucket(bucketName);
-                const file = bucket.file(objectName);
-                await file.delete();
-            }
-            const folderName = 'books';
-            const uniqueIdentifier = uuidv4();
-            const objectName = folderName + '/' + uniqueIdentifier + '-' + req.file.originalname;
-
-            const bucket = storage.bucket(bucketName);
-            const file = bucket.file(objectName);
-            await file.save(req.file.buffer, {
-                contentType: req.file.mimetype,
-            });
-            imageUrl = `https://storage.googleapis.com/${bucketName}/${objectName}`;
+            await deleteImage(imageUrl);
+            imageUrl = await saveImage(req.file, 'books');
         }
-        const categories = JSON.parse(req.body.categories);
         let notesArray = [];
         if (req.body.notesArray) {
             notesArray = req.body.notesArray;
@@ -142,7 +148,7 @@ async function updateBook(req, res) {
             title: req.body.updateTitle,
             author: req.body.updateAuthor,
             publishingYear: req.body.updatePublishingYear,
-            categories: categories, 
+            categories: categories,
             amazon: req.body.amazon,
             perlego: req.body.perlego,
             quote: req.body.quote,
@@ -159,24 +165,16 @@ async function updateBook(req, res) {
 }
 
 async function deleteBook(req, res) {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+    const bookId = req.params.id;
+    if (!isObjectId(bookId)) {
+        return res.status(400).json({ error: 'Invalid book id.' });
     }
     try {
-        const bookId = req.params.id;
         const existingBook = await Book.findById(bookId);
         if (!existingBook) {
             return res.status(404).json({ error: 'Book not found.' });
         }
-        const imageUrl = existingBook.image;
-        if (imageUrl) {
-            const bucketName = 'great-read-bucket';
-            const objectName = imageUrl.replace(`https://storage.googleapis.com/${bucketName}/`, '');
-            const bucket = storage.bucket(bucketName);
-            const file = bucket.file(objectName);
-            await file.delete();
-        }
+        await deleteImage(existingBook.image);
         await existingBook.deleteOne();
 
         res.status(200).json({ message: 'Book deleted successfully.' });
@@ -189,14 +187,17 @@ async function deleteBook(req, res) {
 async function searchBook(req, res) {
     try {
         const searchTerm = req.query.term;
+        if (searchTerm !== undefined && typeof searchTerm !== 'string') {
+            return res.status(400).json({ error: 'Invalid search term.' });
+        }
         let books;
         if (!searchTerm || searchTerm.trim() === "") {
             books = await Book.find({}, { title: 1, author: 1 });
         } else {
             books = await Book.find({
                 $or: [
-                    { title: { $regex: searchTerm, $options: 'i' } },
-                    { author: { $regex: searchTerm, $options: 'i' } },
+                    { title: searchRegex(searchTerm) },
+                    { author: searchRegex(searchTerm) },
                 ],
             }, { title: 1, author: 1 });
         }
@@ -210,26 +211,15 @@ async function searchBook(req, res) {
 async function addCategory(req, res) {
     try {
         const { categoryName, isBestSeller } = req.body;
-        const categoryImageFile = req.file;
 
-        if (!categoryImageFile) {
+        if (!req.file) {
             return res.status(400).json({ error: 'No category image file uploaded.' });
         }
+        if (typeof categoryName !== 'string' || !categoryName.trim()) {
+            return res.status(400).json({ error: 'A category name is required.' });
+        }
 
-        const uniqueIdentifier = uuidv4();
-
-        const bucketName = 'great-read-bucket';
-        const folderName = 'categories';
-        const objectName = `${folderName}/${uniqueIdentifier}-${categoryImageFile.originalname}`;
-
-        const bucket = storage.bucket(bucketName);
-        const file = bucket.file(objectName);
-
-        await file.save(req.file.buffer, {
-            contentType: req.file.mimetype,
-        });
-
-        const categoryImage = `https://storage.googleapis.com/${bucketName}/${objectName}`;
+        const categoryImage = await saveImage(req.file, 'categories');
 
         const newCategory = new Category({
             name: categoryName,
@@ -250,12 +240,15 @@ async function addCategory(req, res) {
 async function searchCategory(req, res) {
     try {
         const searchTerm = req.query.term;
+        if (searchTerm !== undefined && typeof searchTerm !== 'string') {
+            return res.status(400).json({ error: 'Invalid search term.' });
+        }
         let categories;
         if (!searchTerm || searchTerm.trim() === "") {
             categories = await Category.find({}, { image: 0 });
         } else {
             categories = await Category.find({
-                name: { $regex: searchTerm, $options: 'i' },
+                name: searchRegex(searchTerm),
             }, { image: 0 });
         }
         res.json(categories);
@@ -266,20 +259,16 @@ async function searchCategory(req, res) {
 }
 
 async function deleteCategory(req, res) {
+    const categoryId = req.body.categoryId;
+    if (!isObjectId(categoryId)) {
+        return res.status(400).json({ message: 'Invalid category id' });
+    }
     try {
-        const categoryId = req.body.categoryId;
         const existingCategory = await Category.findById(categoryId);
         if (!existingCategory) {
             return res.status(404).json({ message: 'Category not found' });
         }
-        const categoryImage = existingCategory.image;
-        if (categoryImage) {
-            const bucketName = 'great-read-bucket';
-            const objectName = categoryImage.replace(`https://storage.googleapis.com/${bucketName}/`, '');
-            const bucket = storage.bucket(bucketName);
-            const file = bucket.file(objectName);
-            await file.delete();
-        }
+        await deleteImage(existingCategory.image);
         await existingCategory.deleteOne();
         res.status(200).json({ message: 'Category deleted successfully' });
     } catch (error) {
@@ -289,14 +278,16 @@ async function deleteCategory(req, res) {
 }
 
 async function updateTopPicks(req, res) {
+    const { month, year, book1Id, book2Id, book3Id } = req.body;
+    if (![book1Id, book2Id, book3Id].every(isObjectId)) {
+        return res.status(400).json({ message: 'Invalid book ids.' });
+    }
     try {
         const existingTopPicks = await TopPicks.findOne();
         if (!existingTopPicks) {
             return res.status(404).json({ message: 'TopPicks document not found.' });
         }
 
-        const { month, year, book1Id, book2Id, book3Id } = req.body;
-        
         const previousBooks = existingTopPicks.books;
         if (previousBooks.length === 3) {
             await Promise.all(previousBooks.map(bookId =>
@@ -324,6 +315,7 @@ async function updateTopPicks(req, res) {
 }
 
 module.exports = {
+    IMAGE_EXTENSIONS,
     checkDuplicateTitle,
     uploadBook,
     getBook,

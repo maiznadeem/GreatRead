@@ -1,54 +1,68 @@
 const fs = require("fs");
-const path = require('path');
 const axios = require("axios");
-const stripe = require("stripe")(process.env.STRIPE_PRIVATE_KEY);
 const { Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, AlignmentType, ExternalHyperlink, PageBreak, CharacterSet, ShadingType } = require("docx");
-const { Storage } = require('@google-cloud/storage');
 const { v4: uuidv4 } = require('uuid');
+const stripe = require("../utils/stripe");
+const { storage, PURCHASE_BUCKET } = require("../utils/storage");
+const { toBookIds, isStringArray } = require("../utils/validate");
 const Book = require("../models/Book");
 const Payment = require("../models/Payment");
 
-const storage = new Storage({
-    keyFilename: path.join(__dirname, 'service-account.json'),
-});
-
 const { convert } = require("./convertToPDF");
 
+const CLAIM_TTL_MS = 10 * 60 * 1000;
 
+const TIERS = {
+    1: { name: "Any 10 books from 1 category", unitAmount: 2900, maxBooks: 10, minCategories: 1, maxCategories: 1 },
+    2: { name: "Any 10 books from 1-3 categories", unitAmount: 4900, maxBooks: 10, minCategories: 1, maxCategories: 3 },
+    3: { name: "Any 30 books from any category", unitAmount: 5900, maxBooks: 30, minCategories: 0, maxCategories: 100 },
+};
+
+const PREVIEW_KEYS = ['notes', 'links', 'label'];
+
+// Returns the validated order, or null if the request body is invalid.
+const parseOrder = ({ previewOptions, selectedButton, notesCategories, books }) => {
+    const tier = Number.isInteger(selectedButton) ? TIERS[selectedButton] : undefined;
+    if (!tier) return null;
+
+    const bookIds = toBookIds(books, tier.maxBooks);
+    if (!bookIds || !bookIds.length || new Set(bookIds).size !== bookIds.length) return null;
+
+    if (!isStringArray(notesCategories, tier.maxCategories)
+        || notesCategories.length < tier.minCategories
+        || new Set(notesCategories).size !== notesCategories.length) return null;
+
+    if (!previewOptions || typeof previewOptions !== 'object' || Array.isArray(previewOptions)
+        || !PREVIEW_KEYS.every((key) => typeof previewOptions[key] === 'boolean')) return null;
+
+    return {
+        tier,
+        selectedButton,
+        bookIds,
+        notesCategories,
+        previewOptions: Object.fromEntries(PREVIEW_KEYS.map((key) => [key, previewOptions[key]])),
+    };
+};
+
+// Creates the Payment and Stripe Checkout session only. Documents are generated after payment (see fulfillPayment).
 const authorizePurchase = async (req, res) => {
-    const { previewOptions, selectedButton, notesCategories, books } = req.body;
+    const order = parseOrder(req.body || {});
+    if (!order) {
+        return res.status(400).json({ error: "Invalid purchase request." });
+    }
 
     try {
-        let unitAmount;
-        let name;
-
-        switch (selectedButton) {
-            case 1:
-                name = "Any 10 books from 1 category"
-                unitAmount = 2900;
-                break;
-            case 2:
-                name = "Any 10 books from 1-3 categories"
-                unitAmount = 4900;
-                break;
-            case 3:
-                name = "Any 30 books from any category"
-                unitAmount = 5900;
-                break;
-            default:
-                name = "Any 10 books from 1 category"
-                unitAmount = 2900;
-                break;
+        if (await Book.countDocuments({ _id: { $in: order.bookIds } }) !== order.bookIds.length) {
+            return res.status(400).json({ error: "Invalid purchase request." });
         }
 
         const payment = new Payment({
-            amount: unitAmount,
-            previewOptions,
-            selectedButton,
-            categories: notesCategories,
-            books,
+            amount: order.tier.unitAmount,
+            previewOptions: order.previewOptions,
+            selectedButton: order.selectedButton,
+            categories: order.notesCategories,
+            books: order.bookIds,
         });
-
         await payment.save();
 
         const session = await stripe.checkout.sessions.create({
@@ -58,9 +72,9 @@ const authorizePurchase = async (req, res) => {
                     price_data: {
                         currency: 'gbp',
                         product_data: {
-                            name: name,
+                            name: order.tier.name,
                         },
-                        unit_amount: unitAmount
+                        unit_amount: order.tier.unitAmount
                     },
                     quantity: 1,
                 }
@@ -69,18 +83,9 @@ const authorizePurchase = async (req, res) => {
             cancel_url: `${process.env.CLIENT_URL}/notes?id=${payment._id}`,
         });
 
-        const urls = await getWordDocument({ previewOps: previewOptions, notesBooks: books });
-
         payment.stripeId = session.id;
         payment.url = session.url;
-        payment.urls = urls;
-        
         await payment.save();
-
-        if (!urls || !urls.length) {
-            res.status(500).json({ error: "There's an error on our side." });
-            return;
-        }
 
         res.json({ url: session.url });
     } catch (error) {
@@ -89,14 +94,39 @@ const authorizePurchase = async (req, res) => {
     }
 }
 
+// Generates the documents for a paid payment. Returns the updated payment, or null if another
+// request/webhook already holds the generation claim (or there is nothing to do).
+const fulfillPayment = async (payment) => {
+    const claimed = await Payment.findOneAndUpdate(
+        {
+            _id: payment._id,
+            success: true,
+            $and: [
+                { $or: [{ urls: { $exists: false } }, { urls: { $size: 0 } }] },
+                { $or: [{ generatingAt: null }, { generatingAt: { $lt: new Date(Date.now() - CLAIM_TTL_MS) } }] },
+            ],
+        },
+        { $set: { generatingAt: new Date() } },
+        { returnDocument: 'after' }
+    );
+    if (!claimed) return null;
 
+    const urls = await getWordDocument({ previewOps: claimed.previewOptions, bookIds: claimed.books });
 
-const getWordDocument = async ({ previewOps, notesBooks }) => {
+    return Payment.findOneAndUpdate(
+        { _id: claimed._id },
+        urls.length
+            ? { $set: { urls, urlsGeneratedAt: new Date() }, $unset: { generatingAt: 1 } }
+            : { $unset: { generatingAt: 1 } },
+        { returnDocument: 'after' }
+    );
+};
+
+const getWordDocument = async ({ previewOps, bookIds }) => {
 
     try {
 
         const previewOptions = previewOps;
-        const bookIds = notesBooks.map(book => book._id);
         const books = await Book.find({ _id: { $in: bookIds } }).populate('notes');
 
 
@@ -457,12 +487,11 @@ const getWordDocument = async ({ previewOps, notesBooks }) => {
 
 async function uploadDocs(filename) {
     try {
-        const bucketName = 'great-read-purchase';
         const folderName = 'purchase';
         const objectNameDocx = `${folderName}/${filename}/${filename}.docx`;
         const objectNamePdf = `${folderName}/${filename}/${filename}.pdf`;
 
-        const bucket = storage.bucket(bucketName);
+        const bucket = storage.bucket(PURCHASE_BUCKET);
 
         await Promise.all([
             new Promise((resolve, reject) => {
@@ -515,4 +544,5 @@ async function uploadDocs(filename) {
 
 module.exports = {
     authorizePurchase,
+    fulfillPayment,
 };

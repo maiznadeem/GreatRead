@@ -1,10 +1,18 @@
+require('dotenv').config();
+
+const REQUIRED_ENV = ['SESSION_SECRET', 'MONGO_DB_URL', 'STRIPE_PRIVATE_KEY', 'STRIPE_WEBHOOK_SECRET'];
+const missingEnv = REQUIRED_ENV.filter((name) => !process.env[name]);
+if (missingEnv.length) {
+    console.error(`Missing required environment variables: ${missingEnv.join(', ')}`);
+    process.exit(1);
+}
+
 const express = require('express');
 const mongoose = require('mongoose');
 const session = require('express-session');
+const { MongoStore } = require('connect-mongo');
 const cors = require('cors');
-require('dotenv').config();
 const path = require('path');
-const Payment = require('./models/Payment');
 
 const { adminRoute } = require('./routes/adminRoute');
 const { loginRoute } = require('./routes/loginRoute');
@@ -12,22 +20,55 @@ const { resetRoute } = require('./routes/resetRoute');
 const { logoutRoute } = require('./routes/logoutRoute');
 const { getRoute } = require('./routes/getRoute');
 const { purchaseRoute } = require('./routes/purchaseRoute');
-
+const { stripeWebhook } = require('./routes/webhookRoute');
 
 const app = express();
+
+// Two proxies sit in front of the app (Cloudflare Worker, then Google's front end), so trust exactly two hops.
+app.set('trust proxy', 2);
+
+// Stripe needs the raw body to verify the signature, so this must come before express.json().
+app.post('/webhooks/stripe', express.raw({ type: 'application/json' }), stripeWebhook);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors());
+app.use((req, res, next) => {
+    req.body ??= {};
+    next();
+});
+
+const allowedOrigins = [
+    process.env.CLIENT_URL,
+    ...(process.env.ALLOWED_ORIGINS || 'http://localhost:5173,https://great-read-maiz.vercel.app,https://great-read-dev.vercel.app').split(','),
+].map((origin) => origin && origin.trim().replace(/\/$/, '')).filter(Boolean);
+
+// Requests without an Origin header (same-origin pages, server-to-server) are always allowed.
+app.use(cors({
+    origin: (origin, callback) => callback(null, !origin || allowedOrigins.includes(origin)),
+    credentials: true,
+}));
 
 const port = process.env.PORT || 8080;
-const dbURL = process.env.MONGO_DB_URL;
-const secretKey = process.env.SESSION_SECRET;
-const stripe = require("stripe")(process.env.STRIPE_PRIVATE_KEY);
+
+const mongoClientPromise = mongoose
+    .connect(process.env.MONGO_DB_URL)
+    .then((m) => {
+        console.log('Connected to MongoDB');
+        return m.connection.getClient();
+    });
 
 app.use(session({
-    secret: secretKey,
+    name: 'greatread.sid',
+    secret: process.env.SESSION_SECRET,
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
+    store: MongoStore.create({ clientPromise: mongoClientPromise, ttl: 8 * 60 * 60 }),
+    cookie: {
+        httpOnly: true,
+        secure: 'auto',
+        sameSite: 'lax',
+        maxAge: 8 * 60 * 60 * 1000,
+    },
 }));
 
 app.use(express.static(path.join(__dirname, 'public')));
@@ -64,60 +105,20 @@ app.get('/authpage', (req, res) => {
     }
 });
 
-
-app.post('/webhooks/stripe', async (req, res) => {
-    const payload = req.body;
-    const signature = req.headers['stripe-signature'];
-
-    let event;
-
-    if (process.env.LOCAL_NODE_ENV == "PROD") {
-        try {
-            event = stripe.webhooks.constructEvent(payload, signature, process.env.STRIPE_WEBHOOK_SECRET);
-        } catch (err) {
-            console.error('Error verifying webhook signature:', err.message);
-            return res.sendStatus(400);
-        }
-    }
-    else {
-        event = payload;
-    }
-
-    try {
-        if (event.type === 'checkout.session.completed') {
-            const session = event.data.object;
-            const sessionId = session.id;
-            const payment = await Payment.findOne({ stripeId: sessionId });
-
-            if (payment) {
-                payment.success = true;
-                await payment.save();
-                console.log('Payment successful. Session ID:', sessionId);
-            } else {
-                console.log('Payment not found. Session ID:', sessionId);
-            }
-        } else {
-            console.log('Unhandled event type:', event.type);
-        }
-
-        res.sendStatus(200);
-    } catch (error) {
-        console.error('Error handling webhook event:', error.message);
-        res.sendStatus(500);
-    }
+app.use((err, req, res, next) => {
+    if (res.headersSent) return next(err);
+    const status = err.name === 'MulterError' ? 400 : err.status || err.statusCode || 500;
+    if (status >= 500) console.error(err);
+    res.status(status).json({ error: status >= 500 ? 'Internal server error' : err.message });
 });
 
-
-
-mongoose
-    .connect(dbURL)
+mongoClientPromise
     .then(() => {
-        console.log('Connected to MongoDB');
+        app.listen(port, () => {
+            console.log(`Server is running on port ${port}`);
+        });
     })
     .catch((err) => {
         console.error('Error connecting to MongoDB:', err);
+        process.exit(1);
     });
-
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-});

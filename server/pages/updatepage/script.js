@@ -287,7 +287,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     searchButton.addEventListener("click", function () {
         const searchTerm = searchInput.value.trim();
-        axios.get(`/admin/searchbook?term=${searchTerm}`)
+        axios.get(`/admin/searchbook?term=${encodeURIComponent(searchTerm)}`)
             .then((response) => {
                 const books = response.data;
                 searchResults.innerHTML = "";
@@ -295,9 +295,13 @@ document.addEventListener("DOMContentLoaded", function () {
                     books.forEach((book) => {
                         const bookDiv = document.createElement("div");
                         bookDiv.classList.add("book");
-                        bookDiv.innerHTML = `<p><strong>ID:</strong> ${book._id}</p>
-                                             <p><strong>Title:</strong> ${book.title}</p>
-                                             <p><strong>Author:</strong> ${book.author}</p>`;
+                        [['ID:', book._id], ['Title:', book.title], ['Author:', book.author]].forEach(([label, value]) => {
+                            const line = document.createElement("p");
+                            const strong = document.createElement("strong");
+                            strong.textContent = label;
+                            line.append(strong, ` ${value}`);
+                            bookDiv.appendChild(line);
+                        });
                         searchResults.appendChild(bookDiv);
                     });
                 } else {

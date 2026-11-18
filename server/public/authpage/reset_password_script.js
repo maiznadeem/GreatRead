@@ -14,14 +14,12 @@ document.addEventListener("DOMContentLoaded", function () {
             resetButton.disabled = true;
             resetButton.textContent = "Loading...";
 
-            const { protocol, hostname, port } = window.location;
-
             const response = await fetch("/reset/requestResetPassword", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ email, protocol, hostname, port }),
+                body: JSON.stringify({ email }),
             });
 
             const data = await response.json();

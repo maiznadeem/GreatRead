@@ -5,20 +5,28 @@ const TopPicks = require('../models/TopPicks');
 const Quote = require('../models/Quote');
 const Category = require('../models/Category');
 const Payment = require('../models/Payment');
-const stripe = require('stripe')(process.env.STRIPE_PRIVATE_KEY);
+const stripe = require('../utils/stripe');
+const { fulfillPayment } = require('../controllers/purchaseController');
+const { escapeRegex, isObjectId, isStringArray, toBookIds } = require('../utils/validate');
+
+const MAX_SEARCH_LENGTH = 100;
 
 getRoute.post('/books', async (req, res) => {
     const { offset, limit, categories, searchTerm } = req.body;
+    if ((searchTerm != null && typeof searchTerm !== 'string')
+        || (categories != null && !isStringArray(categories))) {
+        return res.status(400).json({ error: 'Invalid request.' });
+    }
     try {
-        let offsetNum = parseInt(offset) || 0;
-        let limitNum = parseInt(limit) || 96;
+        let offsetNum = Math.max(parseInt(offset) || 0, 0);
+        let limitNum = Math.min(Math.max(parseInt(limit) || 96, 1), 200);
 
         let query = Book.find().sort({ priority: -1, _id: 1 });
 
         let totalCountQuery = Book.find();
 
-        if (searchTerm && searchTerm !== '') {
-            const searchRegex = new RegExp(searchTerm, 'i');
+        if (searchTerm) {
+            const searchRegex = new RegExp(escapeRegex(searchTerm.slice(0, MAX_SEARCH_LENGTH)), 'i');
             query = query.or([{ title: searchRegex }, { author: searchRegex }]);
             totalCountQuery = totalCountQuery.or([{ title: searchRegex }, { author: searchRegex }]);
         }
@@ -107,11 +115,11 @@ getRoute.get('/categories', async (req, res) => {
 });
 
 
-async function getRandomBooksByCategoriesFromDB(categories, goal, books) {
+async function getRandomBooksByCategoriesFromDB(categories, goal, bookIds) {
     try {
         const filteredBooks = await Book.find({
             categories: { $in: categories },
-            _id: { $nin: books.map(book => book._id) }
+            _id: { $nin: bookIds }
         });
         const selectedBooks = shuffleArray(filteredBooks).slice(0, goal);
 
@@ -124,8 +132,13 @@ async function getRandomBooksByCategoriesFromDB(categories, goal, books) {
 
 getRoute.post('/getRandomBooks', async (req, res) => {
     const { categories, goal, books } = req.body;
+    const bookIds = toBookIds(books ?? [], 100);
+    const goalNum = Number(goal);
+    if (!isStringArray(categories) || !bookIds || !Number.isInteger(goalNum) || goalNum < 1 || goalNum > 100) {
+        return res.status(400).json({ error: 'Invalid request.' });
+    }
     try {
-        const randomBooks = await getRandomBooksByCategoriesFromDB(categories, goal, books);
+        const randomBooks = await getRandomBooksByCategoriesFromDB(categories, goalNum, bookIds);
         res.json(randomBooks);
     } catch (error) {
         console.error('Error fetching random books by categories:', error);
@@ -136,20 +149,24 @@ getRoute.post('/getRandomBooks', async (req, res) => {
 getRoute.post('/getPayment', async (req, res) => {
     const { sessionId } = req.body;
 
+    if (!isObjectId(sessionId)) {
+        return res.status(400).json({ error: 'Invalid payment id' });
+    }
+
     try {
-        const payment = await Payment.findById(sessionId).populate({
-            path: 'books',
-            select: '-notes',
-        });
+        let payment = await Payment.findById(sessionId);
 
         if (!payment) {
             return res.status(404).json({ error: 'Payment not found' });
         }
 
+        const wasFetchedBefore = payment.fetchedBefore;
+
         if (!payment.success && payment.stripeId) {
             try {
                 const session = await stripe.checkout.sessions.retrieve(payment.stripeId);
                 if (session.payment_status === 'paid') {
+                    await Payment.updateOne({ _id: payment._id }, { $set: { success: true } });
                     payment.success = true;
                 }
             } catch (err) {
@@ -157,16 +174,34 @@ getRoute.post('/getPayment', async (req, res) => {
             }
         }
 
-        const wasFetchedBefore = payment.fetchedBefore;
-        if (!wasFetchedBefore || payment.isModified('success')) {
-            payment.fetchedBefore = true;
-            await payment.save();
+        let processing = false;
+        let generationFailed = false;
+        if (payment.success && !payment.urls?.length) {
+            const fulfilled = await fulfillPayment(payment);
+            if (fulfilled) {
+                payment = fulfilled;
+                generationFailed = !payment.urls?.length;
+            } else {
+                processing = true;
+            }
         }
 
+        if (!wasFetchedBefore) {
+            await Payment.updateOne({ _id: payment._id }, { $set: { fetchedBefore: true } });
+        }
+
+        await payment.populate({ path: 'books', select: '-notes' });
         const result = payment.toObject();
         result.fetchedBefore = wasFetchedBefore;
         if (!result.success) {
             result.urls = [];
+        }
+        if (processing) {
+            result.urls = [];
+            result.processing = true;
+        }
+        if (generationFailed) {
+            result.generationFailed = true;
         }
 
         return res.json(result);

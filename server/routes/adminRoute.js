@@ -9,6 +9,11 @@ const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
         fileSize: 5 * 1024 * 1024,
+        files: 1,
+    },
+    fileFilter: (req, file, cb) => {
+        if (adminController.IMAGE_EXTENSIONS[file.mimetype]) return cb(null, true);
+        cb(Object.assign(new Error('Only JPEG, PNG, WebP or GIF images are allowed.'), { status: 400 }));
     },
 });
 

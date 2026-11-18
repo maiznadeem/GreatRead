@@ -1,3 +1,0 @@
-dispatch:
-  - url: "greatread.projects.himaiz.com/*"
-    service: default
