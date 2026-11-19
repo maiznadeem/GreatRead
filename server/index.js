@@ -12,44 +12,67 @@ const mongoose = require('mongoose');
 const session = require('express-session');
 const { MongoStore } = require('connect-mongo');
 const cors = require('cors');
-const path = require('path');
+const helmet = require('helmet');
 
+const { allowedOrigins } = require('./utils/config');
+const { globalLimiter } = require('./utils/rateLimiters');
 const { adminRoute } = require('./routes/adminRoute');
-const { loginRoute } = require('./routes/loginRoute');
-const { resetRoute } = require('./routes/resetRoute');
-const { logoutRoute } = require('./routes/logoutRoute');
+const { authRoute } = require('./routes/authRoute');
 const { getRoute } = require('./routes/getRoute');
 const { purchaseRoute } = require('./routes/purchaseRoute');
 const { stripeWebhook } = require('./routes/webhookRoute');
 
+const SESSION_IDLE_MS = 2 * 60 * 60 * 1000;
+const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
 const app = express();
+
+app.disable('x-powered-by');
 
 // Google's front end appends the real client IP as the last X-Forwarded-For entry and sets
 // X-Forwarded-Proto, so trust exactly one hop: earlier (client-supplied) entries are ignored.
 app.set('trust proxy', 1);
 
+// This server only returns JSON: nothing may be loaded, framed or sniffed from its responses.
+app.use(helmet({
+    contentSecurityPolicy: {
+        useDefaults: false,
+        directives: { 'default-src': ["'none'"], 'frame-ancestors': ["'none'"] },
+    },
+    strictTransportSecurity: { maxAge: 31536000, includeSubDomains: true },
+    referrerPolicy: { policy: 'no-referrer' },
+}));
+
 // Stripe needs the raw body to verify the signature, so this must come before express.json().
+// It is also registered before the CORS, rate-limit and origin checks, which do not apply to Stripe.
 app.post('/webhooks/stripe', express.raw({ type: 'application/json' }), stripeWebhook);
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Requests without an Origin header (server-to-server) pass CORS; the origin guard below still
+// requires one for state-changing /auth and /admin calls.
+app.use(cors({
+    origin: (origin, callback) => callback(null, !origin || allowedOrigins.includes(origin)),
+    credentials: true,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    exposedHeaders: ['RateLimit', 'RateLimit-Policy', 'Retry-After'],
+    maxAge: 600,
+}));
+
+app.use(globalLimiter);
+
+app.use(express.json({ limit: '100kb' }));
 app.use((req, res, next) => {
     req.body ??= {};
     next();
 });
 
-const allowedOrigins = [
-    process.env.CLIENT_URL,
-    ...(process.env.ALLOWED_ORIGINS || 'http://localhost:5173,https://great-read-maiz.vercel.app,https://great-read-dev.vercel.app').split(','),
-].map((origin) => origin && origin.trim().replace(/\/$/, '')).filter(Boolean);
-
-// Requests without an Origin header (same-origin pages, server-to-server) are always allowed.
-app.use(cors({
-    origin: (origin, callback) => callback(null, !origin || allowedOrigins.includes(origin)),
-    credentials: true,
-}));
-
-const port = process.env.PORT || 8080;
+// CSRF guard: a browser always sends Origin on cross-origin and on state-changing requests.
+app.use(['/auth', '/admin'], (req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    if (UNSAFE_METHODS.has(req.method) && !allowedOrigins.includes(req.get('Origin'))) {
+        return res.status(403).json({ error: 'Forbidden origin' });
+    }
+    next();
+});
 
 const mongoClientPromise = mongoose
     .connect(process.env.MONGO_DB_URL)
@@ -63,60 +86,46 @@ app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    store: MongoStore.create({ clientPromise: mongoClientPromise, ttl: 8 * 60 * 60 }),
+    rolling: true,
+    proxy: true,
+    store: MongoStore.create({ clientPromise: mongoClientPromise, ttl: SESSION_IDLE_MS / 1000 }),
     cookie: {
         httpOnly: true,
         secure: 'auto',
-        sameSite: 'lax',
-        maxAge: 8 * 60 * 60 * 1000,
+        sameSite: 'strict',
+        maxAge: SESSION_IDLE_MS,
     },
 }));
 
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/reset/passwordReset', express.static(path.join(__dirname, 'public', 'resetPassword')));
+// Health check. (Cloud Run reserves paths ending in 'z', so no /healthz.)
+app.get('/', (req, res) => res.json({ status: 'ok' }));
 
-function isAuthenticated(req, res, next) {
-    if (req.session.isAuthenticated) {
-        next();
-    } else {
-        res.redirect('/authpage');
-    }
-}
-
-app.use('/login', loginRoute);
-app.use('/reset', resetRoute)
-app.use('/logout', logoutRoute);
+app.use('/auth', authRoute);
+app.use('/admin', adminRoute);
 app.use('/get', getRoute);
 app.use('/purchase', purchaseRoute);
 
-app.use('/admin', isAuthenticated);
-app.use('/admin', adminRoute);
-app.get('/', (req, res) => {
-    if (req.session.isAuthenticated) {
-        res.redirect('/admin');
-    } else {
-        res.redirect('/authpage');
-    }
-});
-app.get('/authpage', (req, res) => {
-    if (req.session.isAuthenticated) {
-        res.redirect('/admin');
-    } else {
-        res.sendFile(path.join(__dirname, 'public', 'authpage', 'index.html'));
-    }
+app.use((req, res) => {
+    res.status(404).json({ error: 'Not found' });
 });
 
 app.use((err, req, res, next) => {
     if (res.headersSent) return next(err);
+    // body-parser errors can echo parts of the request body, so give them fixed messages.
+    const bodyError = typeof err.type === 'string' && err.type.startsWith('entity.');
     const status = err.name === 'MulterError' ? 400 : err.status || err.statusCode || 500;
     if (status >= 500) console.error(err);
-    res.status(status).json({ error: status >= 500 ? 'Internal server error' : err.message });
+    const body = {
+        error: status >= 500 ? 'Internal server error' : bodyError ? 'Invalid request body.' : err.message,
+    };
+    if (status < 500 && typeof err.code === 'string' && err.constructor.name === 'HttpError') body.code = err.code;
+    res.status(status).json(body);
 });
 
 mongoClientPromise
     .then(() => {
-        app.listen(port, () => {
-            console.log(`Server is running on port ${port}`);
+        app.listen(process.env.PORT || 8080, () => {
+            console.log(`Server is running on port ${process.env.PORT || 8080}`);
         });
     })
     .catch((err) => {

@@ -12,4 +12,5 @@ gcloud run deploy great-read-image \
   --region us-central1 \
   --service-account great-read-service@great-read-398408.iam.gserviceaccount.com \
   --env-vars-file .cloudrun-env.yaml \
+  --max-instances 2 \
   --quiet
