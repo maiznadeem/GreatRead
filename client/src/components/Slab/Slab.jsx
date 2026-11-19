@@ -6,6 +6,7 @@ import pdf from "../../assets/links/PDF.png";
 import word from "../../assets/links/Word.png";
 import ConfirmationDialog from "./ConfirmationDialog";
 import ExpirationDialog from "./ExpirationDialog"
+import { scrollToElement } from "../../utils/scroll";
 
 const Slab = () => {
     const { previewOptions, selectedButton, notesBooks, setNotesBooks, urls, setUrls, urlsLoading, setUrlsLoading, notesCategories } = useNotes();
@@ -40,11 +41,7 @@ const Slab = () => {
         setNotesBooks([]);
     };
 
-    const handleBelowClick = () => {
-        const targetElement = document.getElementById("notessection");
-        const offset = targetElement.offsetTop - 170;
-        window.scrollTo({ top: offset, behavior: "smooth" });
-    };
+    const handleBelowClick = () => scrollToElement("notessection");
 
     const handlePurchase = async () => {
         if (urls && urls.address && urls?.address?.length != 0) {
