@@ -10,7 +10,8 @@ const Category = require('../models/Category');
 const Note = require('../models/Note');
 
 const PUBLIC_URL_PREFIX = `https://storage.googleapis.com/${BOOKS_BUCKET}/`;
-const MAX_BOOKS = 500;
+const DEFAULT_PAGE_SIZE = 24;
+const MAX_PAGE_SIZE = 100;
 const TOP_PICK_COUNT = 3;
 
 // Handlers may throw HttpError (or let anything else bubble to the 500 handler in index.js).
@@ -89,14 +90,32 @@ async function getStats(req, res) {
 
 // ---- Books ----
 
+const BOOK_SORTS = {
+    title: { title: 1, _id: 1 },
+    newest: { createdAt: -1, _id: -1 },
+};
+
+// Reads a positive integer query param, falling back to `fallback` and clamping to [1, max].
+const intParam = (value, fallback, max) => {
+    const n = typeof value === 'string' && /^\d{1,6}$/.test(value) ? Number(value) : fallback;
+    return Math.min(Math.max(n, 1), max);
+};
+
+// GET /admin/books?term=&page=1&limit=24&sort=title|newest
 async function listBooks(req, res) {
     const filter = searchFilter(req.query.term, ['title', 'author']);
+    const sort = Object.hasOwn(BOOK_SORTS, req.query.sort) ? BOOK_SORTS[req.query.sort] : BOOK_SORTS.title;
+    const limit = intParam(req.query.limit, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+    const total = await Book.countDocuments(filter);
+    const pages = Math.max(Math.ceil(total / limit), 1);
+    const page = Math.min(intParam(req.query.page, 1, 100000), pages);
     const books = await Book.find(filter, 'title author publishingYear image categories')
         .collation({ locale: 'en' })
-        .sort({ title: 1, _id: 1 })
-        .limit(MAX_BOOKS)
+        .sort(sort)
+        .skip((page - 1) * limit)
+        .limit(limit)
         .lean();
-    res.json({ books });
+    res.json({ books, total, page, pages, limit });
 }
 
 async function getBook(req, res) {

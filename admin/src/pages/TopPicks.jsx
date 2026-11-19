@@ -10,7 +10,7 @@ import { MONTHS } from "../lib/util";
 function BookPicker({ open, onClose, onPick, takenIds }) {
     const [term, setTerm] = useState("");
     const debounced = useDebounced(term.trim(), 300);
-    const { data, error, loading, reload } = useFetch(`/admin/books${debounced ? `?term=${encodeURIComponent(debounced)}` : ""}`);
+    const { data, error, loading, reload } = useFetch(`/admin/books?limit=20${debounced ? `&term=${encodeURIComponent(debounced)}` : ""}`);
 
     useEffect(() => {
         if (open) setTerm("");
