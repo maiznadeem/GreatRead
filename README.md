@@ -31,9 +31,11 @@ and Liberation fonts are installed there).
   Optional build env vars: `VITE_API_BASE_URL` (both) and `VITE_SITE_URL` (client); defaults are the production hostnames above.
   Security headers (CSP, HSTS, framing) live in each app's `vercel.json`.
 - **Backend:** a Cloud Build trigger in `maiz-portfolio` builds `server/Dockerfile` and deploys on every push to
-  `main`, then deletes every older image so only the deployed one is kept (a cleanup policy on the repository is the
-  backstop). The service runs as `great-read-maiz-portfolio@maiz-portfolio.iam.gserviceaccount.com`, which also
-  signs GCS URLs. `server/update-config.sh` applies runtime config from the gitignored `server/.cloudrun-env.yaml`:
+  `main`, then deletes the image from Artifact Registry: Cloud Run keeps its own copy, so the registry stays empty
+  and free (a cleanup policy deletes anything older than a day as a backstop). A rollback means redeploying an older
+  commit. The service runs as `great-read-maiz-portfolio@maiz-portfolio.iam.gserviceaccount.com`, which also signs
+  GCS URLs. `server/update-config.sh` rebuilds from source with the runtime config in the gitignored
+  `server/.cloudrun-env.yaml` (a config change needs an image), then empties the registry again:
   `CLIENT_URL`, `ADMIN_URL`, `MONGO_DB_URL`, `SESSION_SECRET`, `BCRYPT_SALT`, `EMAIL_USER`, `EMAIL_PASS`,
   `STRIPE_PRIVATE_KEY`, `STRIPE_WEBHOOK_SECRET`
   (optional: `ALLOWED_ORIGINS`, `GCS_BUCKET`, `GCS_PURCHASE_BUCKET`).
