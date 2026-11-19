@@ -41,12 +41,16 @@ GroupDocs Conversion Cloud (docx to PDF) and Gmail SMTP for password-reset email
 - **Security:** sessions are HttpOnly, Secure, SameSite=Strict cookies on the API host; state-changing `/auth` and
   `/admin` requests must come from an allowed `Origin`. Every route except the Stripe webhook is rate limited per IP
   (login and password reset also per email), with counters shared across instances in MongoDB (`rateLimits`).
+- **Google Cloud access:** the API runs as `great-read-service`, which has only Storage Object Admin on
+  `great-read-bucket` and `great-read-purchase` plus Token Creator on itself (to sign download URLs). It has no keys.
+  `deploy.sh` keeps the last 3 deploys' images in Artifact Registry. The legacy App Engine app is disabled.
 - **Bucket CORS:** `gcloud storage buckets update gs://great-read-bucket --cors-file=client/cors.json`.
 
 ## Local development
 
-- Server: copy the env keys above into `server/.env`, set `GOOGLE_APPLICATION_CREDENTIALS` to a service
-  account key, then `npm run dev` in `server/`.
+- Server: copy the env keys above into `server/.env`, run
+  `gcloud auth application-default login --impersonate-service-account great-read-service@great-read-398408.iam.gserviceaccount.com`
+  (needs Token Creator on that account; there are no service account keys), then `npm run dev` in `server/`.
 - Client: `npm run dev` in `client/`; admin: `npm run dev` in `admin/` (port 5174). Requests go through the Vite
   proxy to `VITE_API_PROXY_TARGET` (default: production API; use `http://localhost:8080` with a local server so the
   session cookie works).
