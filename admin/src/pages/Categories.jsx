@@ -157,9 +157,9 @@ export default function Categories() {
                 <ul className={`grid grid-cols-1 gap-4 min-[480px]:grid-cols-2 lg:grid-cols-3 ${loading ? "opacity-60" : ""} transition-opacity`}>
                     {items.map((c) => (
                         <li key={c._id} className="card flex flex-col overflow-hidden">
-                            <div className="relative aspect-[16/9] bg-sand">
+                            <div className="relative aspect-[16/9] overflow-hidden bg-sand">
                                 {c.image?.startsWith("https://") ? (
-                                    <img src={c.image} alt="" loading="lazy" className="h-full w-full object-cover" />
+                                    <img src={c.image} alt="" loading="lazy" className="h-full w-full object-contain p-5" />
                                 ) : (
                                     <Cover className="!aspect-auto h-full w-full rounded-none shadow-none" />
                                 )}
