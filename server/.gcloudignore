@@ -1,0 +1,12 @@
+# Source uploaded by update-config.sh (gcloud run deploy --source). Never upload secrets.
+.gcloudignore
+.git
+.gitignore
+node_modules
+npm-debug.log
+.env
+.env.*
+.cloudrun-env.yaml
+service-account.json
+controllers/service-account.json
+update-config.sh
