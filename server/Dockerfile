@@ -1,9 +1,12 @@
-FROM node:24-alpine
+FROM node:24-trixie-slim
 
-# LibreOffice converts the purchase DOCX to PDF (controllers/convertToPDF.js). The documents use Manrope
-# SemiBold (embedded in the DOCX and installed below); Liberation is the metric-compatible Times New Roman
-# that LibreOffice falls back to for glyphs Manrope lacks, as GroupDocs did.
-RUN apk add --no-cache libreoffice-writer font-liberation
+# LibreOffice converts the purchase DOCX to PDF (controllers/convertToPDF.js). The headless (-nogui) build keeps
+# the image near 1 GB; Alpine's package pulls in Qt/GTK/Mesa (~1.8 GB). The documents use Manrope SemiBold
+# (embedded in the DOCX and installed below); Liberation is the metric-compatible Times New Roman LibreOffice
+# falls back to for glyphs Manrope lacks, as GroupDocs did. tini reaps soffice processes killed on timeout.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends libreoffice-writer-nogui fonts-liberation fontconfig tini \
+ && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production
 WORKDIR /app
@@ -17,4 +20,5 @@ RUN mkdir -p /usr/share/fonts/manrope && cp assets/Manrope/static/Manrope-SemiBo
 USER node
 
 EXPOSE 8080
+ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["node", "index.js"]
