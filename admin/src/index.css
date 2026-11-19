@@ -1,0 +1,38 @@
+@import "@fontsource-variable/manrope";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+        @apply bg-paper font-sans text-ink antialiased;
+        font-feature-settings: "ss01", "cv11";
+    }
+    :focus-visible { @apply outline-2 outline-offset-2 outline-primaryDark; outline-style: solid; }
+    h1, h2, h3 { @apply tracking-tight; }
+    @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+}
+
+@layer components {
+    .btn {
+        @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-55;
+    }
+    .btn-primary { @apply bg-primaryDark text-white hover:bg-secondary; }
+    .btn-quiet { @apply border border-line bg-white text-ink hover:bg-sand; }
+    .btn-danger { @apply bg-danger text-white hover:bg-red-900; }
+    .btn-ghost { @apply text-secondary hover:bg-sand; }
+    .btn-sm { @apply min-h-8 px-3 text-[13px]; }
+    .input {
+        @apply block w-full rounded-lg border border-line bg-white px-3 py-2 text-[15px] text-ink placeholder:text-muted/70 focus:border-primaryDark focus:outline-none focus:ring-2 focus:ring-primaryDark/30;
+    }
+    .input[aria-invalid="true"] { @apply border-danger; }
+    .label { @apply mb-1.5 block text-sm font-semibold text-ink; }
+    .hint { @apply mt-1.5 text-[13px] text-muted; }
+    .err { @apply mt-1.5 text-[13px] font-medium text-danger; }
+    .card { @apply rounded-xl border border-line bg-white; }
+    .chip { @apply inline-flex items-center rounded-full bg-sand px-2.5 py-0.5 text-xs font-medium text-secondary; }
+    .skeleton { @apply animate-pulse rounded-md bg-line/70; }
+}

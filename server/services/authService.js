@@ -3,17 +3,35 @@ const Token = require("../models/Token");
 const sendEmail = require("../utils/email/sendEmail");
 const crypto = require("crypto");
 const bcrypt = require("bcrypt");
+const mongoose = require("mongoose");
+const { ADMIN_URL } = require("../utils/config");
 
 const bcryptSalt = Number(process.env.BCRYPT_SALT) || 10;
+// Compared against when the email is unknown so login takes about as long either way.
+const DUMMY_HASH = bcrypt.hashSync(crypto.randomBytes(16).toString("hex"), bcryptSalt);
 const MIN_PASSWORD_LENGTH = 8;
 const MAX_PASSWORD_LENGTH = 128;
 const INVALID_LINK = "The link is invalid or has expired. Please request a new one.";
 
 const requestError = (message) => Object.assign(new Error(message), { status: 400 });
 
+// Exact match on the trimmed email first (existing accounts keep working), then a case-insensitive one.
+const findUserByEmail = async (email) => {
+    const trimmed = email.trim();
+    return (await User.findOne({ email: trimmed }))
+        || User.findOne({ email: trimmed }).collation({ locale: "en", strength: 2 });
+};
+
+// Returns the user for a correct email/password pair, else null. Always runs one bcrypt comparison.
+const authenticate = async (email, password) => {
+    const user = await findUserByEmail(email);
+    const matches = await bcrypt.compare(password, user?.password || DUMMY_HASH);
+    return user && matches ? user : null;
+};
+
 // Never returns the reset link: it is only delivered by email.
 const requestPasswordReset = async (email) => {
-    const user = await User.findOne({ email });
+    const user = await findUserByEmail(email);
     if (!user) return;
 
     await Token.deleteMany({ userId: user._id });
@@ -24,7 +42,7 @@ const requestPasswordReset = async (email) => {
         token: await bcrypt.hash(resetToken, bcryptSalt),
     }).save();
 
-    const link = `${process.env.SERVER_URL}/reset/passwordReset?token=${resetToken}&id=${user._id}`;
+    const link = `${ADMIN_URL}/reset-password?token=${resetToken}&id=${user._id}`;
 
     await sendEmail(
         user.email,
@@ -35,7 +53,7 @@ const requestPasswordReset = async (email) => {
 };
 
 const resetPassword = async (userId, token, password) => {
-    if (typeof userId !== "string" || !/^[0-9a-fA-F]{24}$/.test(userId) || typeof token !== "string" || !token) {
+    if (typeof userId !== "string" || !/^[0-9a-fA-F]{24}$/.test(userId) || typeof token !== "string" || !/^[0-9a-f]{64}$/i.test(token)) {
         throw requestError(INVALID_LINK);
     }
     if (typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH || password.length > MAX_PASSWORD_LENGTH) {
@@ -53,6 +71,13 @@ const resetPassword = async (userId, token, password) => {
 
     await User.updateOne({ _id: userId }, { $set: { password: await bcrypt.hash(password, bcryptSalt) } });
 
+    // End every existing login for this user (connect-mongo keeps the session as a JSON string).
+    try {
+        await mongoose.connection.collection("sessions").deleteMany({ session: { $regex: `"userId":"${userId.toLowerCase()}"` } });
+    } catch (error) {
+        console.error("Error clearing sessions after password reset:", error.message);
+    }
+
     try {
         const user = await User.findById(userId);
         await sendEmail(user.email, "Password Reset Successfully", { name: user.name }, "./template/resetPassword");
@@ -63,6 +88,7 @@ const resetPassword = async (userId, token, password) => {
 };
 
 module.exports = {
+    authenticate,
     requestPasswordReset,
     resetPassword,
 };

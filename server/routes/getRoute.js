@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const getRoute = express.Router();
 const Book = require('../models/Book');
 const TopPicks = require('../models/TopPicks');
@@ -8,8 +9,10 @@ const Payment = require('../models/Payment');
 const stripe = require('../utils/stripe');
 const { fulfillPayment } = require('../controllers/purchaseController');
 const { escapeRegex, isObjectId, isStringArray, toBookIds } = require('../utils/validate');
+const { getPaymentLimiter } = require('../utils/rateLimiters');
 
 const MAX_SEARCH_LENGTH = 100;
+const MAX_OFFSET = 100000;
 
 getRoute.post('/books', async (req, res) => {
     const { offset, limit, categories, searchTerm } = req.body;
@@ -18,7 +21,7 @@ getRoute.post('/books', async (req, res) => {
         return res.status(400).json({ error: 'Invalid request.' });
     }
     try {
-        let offsetNum = Math.max(parseInt(offset) || 0, 0);
+        let offsetNum = Math.min(Math.max(parseInt(offset) || 0, 0), MAX_OFFSET);
         let limitNum = Math.min(Math.max(parseInt(limit) || 96, 1), 200);
 
         let query = Book.find().sort({ priority: -1, _id: 1 });
@@ -82,27 +85,17 @@ getRoute.get('/quotes', async (req, res) => {
 
 getRoute.get('/randomquotes', async (req, res) => {
     try {
-        const books = await Book.find({}, 'title quote').exec();
-        const shuffledBooks = shuffleArray(books);
-        const randomBooks = shuffledBooks.slice(0, 12);
-        const response = randomBooks.map((book) => ({
-            title: book.title,
-            quote: book.quote,
-        }));
+        // Sampled by the database so the whole collection is never loaded into memory.
+        const response = await Book.aggregate([
+            { $sample: { size: 12 } },
+            { $project: { _id: 0, title: 1, quote: 1 } },
+        ]);
         res.json(response);
     } catch (error) {
         console.error('Error fetching random quotes:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-
-function shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-    }
-    return array;
-}
 
 getRoute.get('/categories', async (req, res) => {
     try {
@@ -117,13 +110,16 @@ getRoute.get('/categories', async (req, res) => {
 
 async function getRandomBooksByCategoriesFromDB(categories, goal, bookIds) {
     try {
-        const filteredBooks = await Book.find({
-            categories: { $in: categories },
-            _id: { $nin: bookIds }
-        });
-        const selectedBooks = shuffleArray(filteredBooks).slice(0, goal);
-
-        return selectedBooks;
+        // Sampled by the database; aggregate() does not cast ids, so convert them explicitly.
+        return await Book.aggregate([
+            {
+                $match: {
+                    categories: { $in: categories },
+                    _id: { $nin: bookIds.map((id) => new mongoose.Types.ObjectId(id)) },
+                },
+            },
+            { $sample: { size: goal } },
+        ]);
     } catch (error) {
         console.error('Error fetching books by categories:', error);
         throw new Error('Could not fetch books by categories from the database.');
@@ -146,7 +142,7 @@ getRoute.post('/getRandomBooks', async (req, res) => {
     }
 });
 
-getRoute.post('/getPayment', async (req, res) => {
+getRoute.post('/getPayment', getPaymentLimiter, async (req, res) => {
     const { sessionId } = req.body;
 
     if (!isObjectId(sessionId)) {

@@ -148,7 +148,7 @@ const getWordDocument = async ({ previewOps, bookIds }) => {
 
         const createTable = async (book) => { 
 
-            const imageBuffer = await axios.get(book.image, { responseType: 'arraybuffer' })
+            const imageBuffer = await axios.get(book.image, { responseType: 'arraybuffer', timeout: 15000, maxContentLength: 10 * 1024 * 1024 })
                 .then(response => Buffer.from(response.data, 'binary'))
                 .catch(error => {
                     console.error("Error fetching image:", error);
