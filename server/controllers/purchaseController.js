@@ -146,6 +146,15 @@ const getWordDocument = async ({ previewOps, bookIds }) => {
         const perlego = fs.readFileSync('./assets/perlego.png');
         const font = fs.readFileSync("./assets/Manrope/static/Manrope-SemiBold.ttf");
 
+        // Explicit table geometry (twips) matching the layout GroupDocs produced: an A4 page less the 500 margins,
+        // a cover column 1pt wider than the 187.5pt cover, and no cell padding. The generated grid used to be
+        // underspecified (two grid columns for three, percentage widths), which LibreOffice lays out differently.
+        const CONTENT_WIDTH = 11906 - 2 * 500;
+        const SIDE_COLUMN = 1885;
+        const MAIN_COLUMN = CONTENT_WIDTH - 2 * SIDE_COLUMN;
+        const NO_CELL_MARGINS = { top: 0, bottom: 0, left: 10, right: 10 };
+        const dxa = (size) => ({ size, type: WidthType.DXA });
+
         const createTable = async (book) => { 
 
             const imageBuffer = await axios.get(book.image, { responseType: 'arraybuffer', timeout: 15000, maxContentLength: 10 * 1024 * 1024 })
@@ -161,19 +170,15 @@ const getWordDocument = async ({ previewOps, bookIds }) => {
             }
 
             return new Table({
-                width: {
-                    size: 100,
-                    type: WidthType.PERCENTAGE,
-                },
+                width: dxa(CONTENT_WIDTH),
+                columnWidths: [SIDE_COLUMN, SIDE_COLUMN, MAIN_COLUMN],
+                margins: NO_CELL_MARGINS,
                 borders: 0,
                 rows: [
                     new TableRow({
                         children: [
                             new TableCell({
-                                width: {
-                                    size: 30,
-                                    type: WidthType.PERCENTAGE,
-                                },
+                                width: dxa(2 * SIDE_COLUMN),
                                 rowSpan: 2,
                                 columnSpan: 2,
                                 children: [
@@ -212,10 +217,7 @@ const getWordDocument = async ({ previewOps, bookIds }) => {
                                 ],
                             }),
                             new TableCell({
-                                width: {
-                                    size: 70,
-                                    type: WidthType.PERCENTAGE,
-                                },
+                                width: dxa(MAIN_COLUMN),
                                 children: [
                                     new Paragraph({
                                         run: {
@@ -247,10 +249,7 @@ const getWordDocument = async ({ previewOps, bookIds }) => {
                         children: [
                             new TableCell({
                                 rowSpan: 4,
-                                width: {
-                                    size: 70,
-                                    type: WidthType.PERCENTAGE,
-                                },
+                                width: dxa(MAIN_COLUMN),
                                 children:
                                     (book.notes?.content ? book.notes.content.map(point => new Paragraph({
                                         children: [
@@ -271,6 +270,7 @@ const getWordDocument = async ({ previewOps, bookIds }) => {
                         children: [
                             new TableCell({
                                 columnSpan: 2,
+                                width: dxa(2 * SIDE_COLUMN),
                                 children: book.categories[0] && previewOptions.label ? [
                                     new Paragraph({
                                         shading: {
@@ -298,6 +298,7 @@ const getWordDocument = async ({ previewOps, bookIds }) => {
                         children: [
                             new TableCell({
                                 columnSpan: 2,
+                                width: dxa(2 * SIDE_COLUMN),
                                 children: book.categories[1] && previewOptions.label ? [
                                     new Paragraph({
                                         shading: {
@@ -325,10 +326,7 @@ const getWordDocument = async ({ previewOps, bookIds }) => {
                     new TableRow({
                         children: [
                             new TableCell({
-                                width: {
-                                    size: 15,
-                                    type: WidthType.PERCENTAGE,
-                                },
+                                width: dxa(SIDE_COLUMN),
                                 children: [
                                     new Paragraph({
                                         children: [
@@ -355,10 +353,7 @@ const getWordDocument = async ({ previewOps, bookIds }) => {
                                 ],
                             }),
                             new TableCell({
-                                width: {
-                                    size: 15,
-                                    type: WidthType.PERCENTAGE,
-                                },
+                                width: dxa(SIDE_COLUMN),
                                 children: [
                                     new Paragraph({
                                         children: [
@@ -412,18 +407,14 @@ const getWordDocument = async ({ previewOps, bookIds }) => {
                 previewOptions.notes &&
                 new Table({
                     borders: 0,
-                    width: {
-                        size: "100%",
-                        type: WidthType.PERCENTAGE,
-                    },
+                    width: dxa(CONTENT_WIDTH),
+                    columnWidths: [CONTENT_WIDTH],
+                    margins: NO_CELL_MARGINS,
                     rows: [
                         new TableRow({
                             children: [
                                 new TableCell({
-                                    width: {
-                                        size: "100%",
-                                        type: WidthType.PERCENTAGE,
-                                    },
+                                    width: dxa(CONTENT_WIDTH),
                                     children: [
                                         new Paragraph({
                                             run: {
@@ -465,7 +456,11 @@ const getWordDocument = async ({ previewOps, bookIds }) => {
                     ],
                     alignment: AlignmentType.LEFT,
                 }),
-            ]))).flat(),
+            ]))).flat().concat(
+                // Ends the document on the page after the last page break; LibreOffice drops a trailing
+                // break-only paragraph, which Word/GroupDocs render as a final blank page.
+                new Paragraph(""),
+            ),
         };        
 
         const doc = new Document({
