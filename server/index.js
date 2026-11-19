@@ -97,9 +97,8 @@ app.use(session({
     },
 }));
 
-const health = (req, res) => res.json({ status: 'ok' });
-app.get('/', health);
-app.get('/healthz', health);
+// Health check. (Cloud Run reserves paths ending in 'z', so no /healthz.)
+app.get('/', (req, res) => res.json({ status: 'ok' }));
 
 app.use('/auth', authRoute);
 app.use('/admin', adminRoute);

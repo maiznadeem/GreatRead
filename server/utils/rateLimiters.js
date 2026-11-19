@@ -31,8 +31,6 @@ module.exports = {
     normalizeEmail,
     globalLimiter: makeLimiter({
         name: 'global', windowMs: 15 * MINUTE, limit: 600, passOnStoreError: true, message: tooMany('requests'),
-        // Health checks come from Google's own probes, not from clients.
-        skip: (req) => req.path === '/healthz',
     }),
     adminWriteLimiter: makeLimiter({
         name: 'admin-write', windowMs: 15 * MINUTE, limit: 120, passOnStoreError: true, message: tooMany('changes'),

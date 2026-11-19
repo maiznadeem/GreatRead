@@ -9,7 +9,7 @@ const authRoute = express.Router();
 
 const MAX_EMAIL_LENGTH = 254;
 const MAX_LOGIN_PASSWORD_LENGTH = 1000;
-const FORGOT_MIN_DURATION_MS = 2000;
+const FORGOT_RESPONSE_MS = 4000;
 const GENERIC_MESSAGE = 'If an account exists for that email, a password reset link has been sent.';
 
 const publicUser = (user) => ({ name: user.name, email: user.email });
@@ -52,12 +52,11 @@ authRoute.post('/password/forgot', forgotIpLimiter, forgotEmailLimiter, async (r
     if (!isEmail(email)) {
         return res.status(400).json({ error: 'Please enter a valid email.' });
     }
-    // Awaited: Cloud Run throttles CPU after the response, so a background send might never finish.
-    // Padded to a minimum duration so response time does not reveal whether the account exists.
-    await Promise.all([
-        requestPasswordReset(email).catch((error) => console.error('Error requesting password reset:', error.message)),
-        sleep(FORGOT_MIN_DURATION_MS),
-    ]);
+    // Always answers after exactly FORGOT_RESPONSE_MS, so timing never reveals whether the account exists.
+    // The email send runs meanwhile (it normally takes 1-2 s); Cloud Run throttles CPU after the response,
+    // so a send that is still running then may be delayed.
+    requestPasswordReset(email).catch((error) => console.error('Error requesting password reset:', error.message));
+    await sleep(FORGOT_RESPONSE_MS);
     res.json({ message: GENERIC_MESSAGE });
 });
 

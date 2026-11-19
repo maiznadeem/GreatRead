@@ -15,11 +15,11 @@ const INVALID_LINK = "The link is invalid or has expired. Please request a new o
 
 const requestError = (message) => Object.assign(new Error(message), { status: 400 });
 
-// Exact match on the trimmed email first (existing accounts keep working), then a case-insensitive one.
-const findUserByEmail = async (email) => {
+// Matches the stored email exactly or in lower case. Every input that can match an account therefore
+// lower-cases to the same value, which is the per-email rate-limit key (see utils/rateLimiters.js).
+const findUserByEmail = (email) => {
     const trimmed = email.trim();
-    return (await User.findOne({ email: trimmed }))
-        || User.findOne({ email: trimmed }).collation({ locale: "en", strength: 2 });
+    return User.findOne({ email: { $in: [trimmed, trimmed.toLowerCase()] } });
 };
 
 // Returns the user for a correct email/password pair, else null. Always runs one bcrypt comparison.
