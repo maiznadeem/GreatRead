@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Category from "../Category/Category";
 import NotesBook from "./NotesBook";
 import DefaultPagination from "../Category/DefaultPagination";
@@ -9,6 +9,7 @@ import TextField from "@mui/material/TextField";
 import SearchIcon from "@mui/icons-material/Search";
 
 import { useNotes } from "../../context/NotesContext";
+import { pauseScrollAnchoring, scrollToListAndResumeAnchoring } from "../../utils/scroll";
 
 const NotesBooks = () => {
     const [books, setBooks] = useState([]);
@@ -24,6 +25,7 @@ const NotesBooks = () => {
     const [activeCategories, setActiveCategories] = useState([]);
 
     const { notesCategories } = useNotes();
+    const scrollPending = useRef(false);
 
     useEffect(() => {
         const fetchCategories = async () => {
@@ -83,24 +85,26 @@ const NotesBooks = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [limit]);
 
+    // After a page or page-size change, scroll to the list once the new books have rendered.
+    useEffect(() => {
+        if (!isLoading && scrollPending.current) {
+            scrollPending.current = false;
+            scrollToListAndResumeAnchoring("notessection");
+        }
+    }, [isLoading]);
+
     const handlePageChange = (newPage) => {
-        if (isLoading) return;
-        const targetElement = document.getElementById("notessection");
-        const offset = targetElement.offsetTop - 170;
-        window.scrollTo({ top: offset, behavior: "smooth" });
-        setTimeout(() => {
-            setCurrentPage(newPage);
-        }, 700);
+        if (isLoading || newPage === currentPage) return;
+        pauseScrollAnchoring();
+        scrollPending.current = true;
+        setCurrentPage(newPage);
     };
 
     const handleBooksPerPageChange = (newLimit) => {
-        if (isLoading) return;
-        const targetElement = document.getElementById("notessection");
-        const offset = targetElement.offsetTop - 170;
-        window.scrollTo({ top: offset, behavior: "smooth" });
-        setTimeout(() => {
-            setLimit(newLimit);
-        }, 700);
+        if (isLoading || newLimit === limit) return;
+        pauseScrollAnchoring();
+        scrollPending.current = true;
+        setLimit(newLimit);
     };
 
     const handleCategoryClick = (categoryName) => {
