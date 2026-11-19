@@ -1,6 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 
 const { storage, BOOKS_BUCKET } = require('../utils/storage');
+const { compressImage } = require('../utils/images');
 const {
     HttpError, badRequest, LIMITS, escapeRegex, isObjectId, stringField, boolField, parseBookFields, detectImageType,
 } = require('../utils/validate');
@@ -39,11 +40,20 @@ function requireImage(file) {
     return type;
 }
 
-// Stores an image under a generated name (never the client's filename) and returns its public URL.
+// Compresses an image and stores it under a generated name (never the client's filename); returns its public URL.
 async function saveImage(file, folderName) {
-    const { mime, ext } = requireImage(file);
-    const objectName = `${folderName}/${uuidv4()}.${ext}`;
-    await storage.bucket(BOOKS_BUCKET).file(objectName).save(file.buffer, { contentType: mime });
+    requireImage(file);
+    let image;
+    try {
+        image = await compressImage(file.buffer, folderName);
+    } catch (error) {
+        throw badRequest('image could not be processed.');
+    }
+    const objectName = `${folderName}/${uuidv4()}.${image.ext}`;
+    await storage.bucket(BOOKS_BUCKET).file(objectName).save(image.buffer, {
+        contentType: image.mime,
+        metadata: { cacheControl: 'public, max-age=31536000, immutable' },
+    });
     return PUBLIC_URL_PREFIX + objectName;
 }
 

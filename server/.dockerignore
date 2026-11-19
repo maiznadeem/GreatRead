@@ -7,4 +7,4 @@ npm-debug.log
 .cloudrun-env.yaml
 service-account.json
 controllers/service-account.json
-deploy.sh
+update-config.sh
