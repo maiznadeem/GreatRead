@@ -20,8 +20,9 @@
 
 Integrations: MongoDB Atlas, Stripe Checkout + webhook (`/webhooks/stripe`), Google Cloud Storage
 (`greatread-books` for public images, `greatread-purchases` for paid downloads via signed URLs; both in
-`us-central1`, inside the free tier),
-GroupDocs Conversion Cloud (docx to PDF) and Gmail SMTP for password-reset emails.
+`us-central1`, inside the free tier), and Gmail SMTP for password-reset emails. Purchased notes are generated as
+DOCX and converted to PDF by LibreOffice inside the server image (`server/controllers/convertToPDF.js`; Manrope
+and Liberation fonts are installed there).
 
 ## Deployment
 
@@ -34,7 +35,7 @@ GroupDocs Conversion Cloud (docx to PDF) and Gmail SMTP for password-reset email
   backstop). The service runs as `great-read-maiz-portfolio@maiz-portfolio.iam.gserviceaccount.com`, which also
   signs GCS URLs. `server/update-config.sh` applies runtime config from the gitignored `server/.cloudrun-env.yaml`:
   `CLIENT_URL`, `ADMIN_URL`, `MONGO_DB_URL`, `SESSION_SECRET`, `BCRYPT_SALT`, `EMAIL_USER`, `EMAIL_PASS`,
-  `GROUPDOCS_CLIENT_ID`, `GROUPDOCS_CLIENT_SECRET`, `STRIPE_PRIVATE_KEY`, `STRIPE_WEBHOOK_SECRET`
+  `STRIPE_PRIVATE_KEY`, `STRIPE_WEBHOOK_SECRET`
   (optional: `ALLOWED_ORIGINS`, `GCS_BUCKET`, `GCS_PURCHASE_BUCKET`).
 - **Custom domains:** `greatread.himaiz.com` and `admin.greatread.himaiz.com` are domains on their Vercel projects
   (Cloudflare CNAMEs to Vercel, DNS only). `api.greatread.himaiz.com` is a Cloud Run domain mapping (Cloudflare
@@ -54,6 +55,7 @@ GroupDocs Conversion Cloud (docx to PDF) and Gmail SMTP for password-reset email
 - Server: copy the env keys above into `server/.env`, run
   `gcloud auth application-default login --impersonate-service-account great-read-maiz-portfolio@maiz-portfolio.iam.gserviceaccount.com`
   (needs Token Creator on that account; there are no service account keys), then `npm run dev` in `server/`.
+  PDF conversion needs LibreOffice: `soffice` on `PATH` or `SOFFICE_PATH` (or run the server image).
 - Client: `npm run dev` in `client/`; admin: `npm run dev` in `admin/` (port 5174). Requests go through the Vite
   proxy to `VITE_API_PROXY_TARGET` (default: production API; use `http://localhost:8080` with a local server so the
   session cookie works).
