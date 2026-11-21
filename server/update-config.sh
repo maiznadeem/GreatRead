@@ -3,7 +3,8 @@
 # main, which deletes the image from Artifact Registry afterwards (Cloud Run keeps its own copy; the registry stays
 # empty and free). A config change needs a new revision and therefore an image, so this script rebuilds from the
 # local source together with the config, then empties the registry again. Run it from an up-to-date main checkout.
-# Config comes from the gitignored server/.cloudrun-env.yaml (see README) and replaces all env vars on the service.
+# Plain (non-secret) env vars come from the gitignored server/.cloudrun-env.yaml and replace all env vars on the
+# service. Secrets come from the single Secret Manager secret greatread-secrets, mounted as APP_SECRETS (see README).
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -12,6 +13,9 @@ REGION=us-central1
 REPO="$REGION-docker.pkg.dev/$PROJECT/cloud-run-source-deploy"
 
 [ -f .cloudrun-env.yaml ] || { echo "Missing server/.cloudrun-env.yaml" >&2; exit 1; }
+if grep -qE '^(MONGO_DB_URL|SESSION_SECRET|EMAIL_PASS|STRIPE_PRIVATE_KEY|STRIPE_WEBHOOK_SECRET):' .cloudrun-env.yaml; then
+  echo "Secrets belong in Secret Manager (greatread-secrets), not server/.cloudrun-env.yaml" >&2; exit 1
+fi
 
 gcloud run deploy great-read-maiz-portfolio \
   --source . \
@@ -19,6 +23,7 @@ gcloud run deploy great-read-maiz-portfolio \
   --region "$REGION" \
   --service-account "great-read-maiz-portfolio@$PROJECT.iam.gserviceaccount.com" \
   --env-vars-file .cloudrun-env.yaml \
+  --set-secrets APP_SECRETS=greatread-secrets:latest \
   --max-instances 2 \
   --quiet
 
