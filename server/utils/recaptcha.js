@@ -28,6 +28,7 @@ const rejection = (assessment, action) => {
     const { tokenProperties, riskAnalysis } = assessment;
     if (tokenProperties?.valid !== true) return `invalid token (${tokenProperties?.invalidReason || 'unknown'})`;
     if (tokenProperties.action !== action) return `action mismatch (${tokenProperties.action})`;
+    if (!recaptcha.hostnames.includes(tokenProperties.hostname)) return `hostname not allowed (${tokenProperties.hostname})`;
     if (!(riskAnalysis?.score >= recaptcha.minScore)) return 'low score';
     return null;
 };
