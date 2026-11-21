@@ -21,6 +21,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 
 const { allowedOrigins } = require('./utils/config');
+const { originAuth } = require('./utils/originAuth');
 const { globalLimiter } = require('./utils/rateLimiters');
 const { adminRoute } = require('./routes/adminRoute');
 const { authRoute } = require('./routes/authRoute');
@@ -38,6 +39,9 @@ app.disable('x-powered-by');
 // Google's front end appends the real client IP as the last X-Forwarded-For entry and sets
 // X-Forwarded-Proto, so trust exactly one hop: earlier (client-supplied) entries are ignored.
 app.set('trust proxy', 1);
+
+// Only traffic that came through the Cloudflare Worker (WAF) is served; this also sets req.ip to the visitor.
+app.use(originAuth);
 
 // This server only returns JSON: nothing may be loaded, framed or sniffed from its responses.
 app.use(helmet({
