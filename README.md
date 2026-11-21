@@ -34,11 +34,16 @@ and Liberation fonts are installed there).
   `main`, then deletes the image from Artifact Registry: Cloud Run keeps its own copy, so the registry stays empty
   and free (a cleanup policy deletes anything older than a day as a backstop). A rollback means redeploying an older
   commit. The service runs as `great-read-maiz-portfolio@maiz-portfolio.iam.gserviceaccount.com`, which also signs
-  GCS URLs. `server/update-config.sh` rebuilds from source with the runtime config in the gitignored
-  `server/.cloudrun-env.yaml` (a config change needs an image), then empties the registry again:
-  `CLIENT_URL`, `ADMIN_URL`, `MONGO_DB_URL`, `SESSION_SECRET`, `BCRYPT_SALT`, `EMAIL_USER`, `EMAIL_PASS`,
-  `STRIPE_PRIVATE_KEY`, `STRIPE_WEBHOOK_SECRET`
-  (optional: `ALLOWED_ORIGINS`, `GCS_BUCKET`, `GCS_PURCHASE_BUCKET`).
+  GCS URLs.
+- **Runtime config:** secrets live in one Secret Manager secret, `greatread-secrets`: a JSON object with
+  `MONGO_DB_URL`, `SESSION_SECRET`, `EMAIL_PASS`, `STRIPE_PRIVATE_KEY` and `STRIPE_WEBHOOK_SECRET`. Cloud Run mounts
+  it as `APP_SECRETS`, and `server/index.js` copies its keys into `process.env` at startup. Only the service
+  account can read it. Keep only the latest version: after adding one, destroy the old one
+  (`gcloud secrets versions destroy`). Non-secret settings are plain env vars in the gitignored
+  `server/.cloudrun-env.yaml`: `CLIENT_URL`, `ADMIN_URL`, `EMAIL_USER`, `BCRYPT_SALT` (optional: `ALLOWED_ORIGINS`,
+  `GCS_BUCKET`, `GCS_PURCHASE_BUCKET`, `RECAPTCHA_*`). `server/update-config.sh` applies both and rebuilds from
+  source, because a config change needs an image, then empties the registry again. Locally, `server/.env` holds
+  everything as plain variables.
 - **Custom domains:** `greatread.himaiz.com` and `admin.greatread.himaiz.com` are domains on their Vercel projects
   (Cloudflare CNAMEs to Vercel, DNS only). `api.greatread.himaiz.com` is a Cloud Run domain mapping (Cloudflare
   CNAME to `ghs.googlehosted.com`, DNS only; `himaiz.com` is verified in Search Console for the deploying account).
