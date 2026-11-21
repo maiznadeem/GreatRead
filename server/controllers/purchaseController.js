@@ -3,6 +3,7 @@ const axios = require("axios");
 const { Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, AlignmentType, ExternalHyperlink, PageBreak, CharacterSet, ShadingType } = require("docx");
 const { randomUUID } = require('crypto');
 const stripe = require("../utils/stripe");
+const { CLIENT_URL } = require("../utils/config");
 const { storage, PURCHASE_BUCKET } = require("../utils/storage");
 const { toBookIds, isStringArray } = require("../utils/validate");
 const Book = require("../models/Book");
@@ -90,8 +91,8 @@ const authorizePurchase = async (req, res) => {
                     quantity: 1,
                 }
             ],
-            success_url: `${process.env.CLIENT_URL}/notes?id=${payment._id}`,
-            cancel_url: `${process.env.CLIENT_URL}/notes?id=${payment._id}`,
+            success_url: `${CLIENT_URL}/notes?id=${payment._id}`,
+            cancel_url: `${CLIENT_URL}/notes?id=${payment._id}`,
         });
 
         payment.stripeId = session.id;
