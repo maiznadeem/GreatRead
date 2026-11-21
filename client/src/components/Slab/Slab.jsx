@@ -195,6 +195,11 @@ const Slab = () => {
                     {urls.address && urls.address.length > 0 ? "Purchase more" : "Purchase"} 
                 </Button>
                 {purchaseError && <p role="alert" className="text-red-600">{purchaseError}</p>}
+                <p className="max-w-xs text-xs text-gray-600">
+                    This site is protected by reCAPTCHA and the Google{" "}
+                    <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer" className="underline">Privacy Policy</a> and{" "}
+                    <a href="https://policies.google.com/terms" target="_blank" rel="noreferrer" className="underline">Terms of Service</a> apply.
+                </p>
                 {
                     urls.address && urls.address.length > 0 && 
                     <p>Warning: Select purchase more if you have downloaded previous documents.</p>

@@ -17,4 +17,12 @@ const allowedOrigins = [
     ...(process.env.ALLOWED_ORIGINS || DEFAULT_ALLOWED_ORIGINS).split(',').map(stripSlash),
 ].filter(Boolean);
 
-module.exports = { CLIENT_URL, ADMIN_URL, allowedOrigins };
+// reCAPTCHA Enterprise (score-based, invisible). The site key is public. Production authenticates with the Cloud Run service account.
+const recaptcha = {
+    enabled: process.env.RECAPTCHA_ENABLED !== 'false',
+    projectId: process.env.RECAPTCHA_PROJECT_ID || 'maiz-portfolio',
+    siteKey: process.env.RECAPTCHA_SITE_KEY || '6LdJoSsuAAAAAFOhxjEi7UgYJVnhWCDyx_w6eS0f',
+    minScore: Number(process.env.RECAPTCHA_MIN_SCORE || 0.3),
+};
+
+module.exports = { CLIENT_URL, ADMIN_URL, allowedOrigins, recaptcha };

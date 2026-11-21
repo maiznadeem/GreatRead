@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { api, setUnauthorizedHandler } from "../api";
 import { AuthContext } from "../lib/auth-context";
+import { getRecaptchaToken } from "../lib/recaptcha";
 import { ToastProvider } from "./ToastProvider";
 
 const NO_SESSION_CHECK = ["/forgot-password", "/reset-password"];
@@ -31,7 +32,7 @@ export function Providers() {
     }, []);
 
     const login = useCallback(async (email, password) => {
-        const d = await api.post("/auth/login", { email, password });
+        const d = await api.post("/auth/login", { email, password, recaptchaToken: await getRecaptchaToken("login") });
         setState({ status: "authed", user: d.user });
     }, []);
 

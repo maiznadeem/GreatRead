@@ -1,6 +1,7 @@
 const express = require('express');
 const { authenticate, requestPasswordReset, resetPassword } = require('../services/authService');
 const { requireAuth } = require('../utils/requireAuth');
+const { requireRecaptcha } = require('../utils/recaptcha');
 const {
     loginIpLimiter, loginEmailLimiter, forgotIpLimiter, forgotEmailLimiter, resetLimiter,
 } = require('../utils/rateLimiters');
@@ -21,7 +22,7 @@ authRoute.get('/session', requireAuth, (req, res) => {
     res.json({ user: publicUser(req.user) });
 });
 
-authRoute.post('/login', loginIpLimiter, loginEmailLimiter, async (req, res) => {
+authRoute.post('/login', loginIpLimiter, loginEmailLimiter, requireRecaptcha('login'), async (req, res) => {
     const { email, password } = req.body;
     if (!isEmail(email) || typeof password !== 'string' || !password || password.length > MAX_LOGIN_PASSWORD_LENGTH) {
         return res.status(400).json({ error: 'Email and password are required.' });
@@ -47,7 +48,7 @@ authRoute.post('/logout', async (req, res) => {
     res.status(204).end();
 });
 
-authRoute.post('/password/forgot', forgotIpLimiter, forgotEmailLimiter, async (req, res) => {
+authRoute.post('/password/forgot', forgotIpLimiter, forgotEmailLimiter, requireRecaptcha('forgot_password'), async (req, res) => {
     const { email } = req.body;
     if (!isEmail(email)) {
         return res.status(400).json({ error: 'Please enter a valid email.' });
@@ -60,7 +61,7 @@ authRoute.post('/password/forgot', forgotIpLimiter, forgotEmailLimiter, async (r
     res.json({ message: GENERIC_MESSAGE });
 });
 
-authRoute.post('/password/reset', resetLimiter, async (req, res) => {
+authRoute.post('/password/reset', resetLimiter, requireRecaptcha('reset_password'), async (req, res) => {
     try {
         const { userId, token, password } = req.body;
         res.json(await resetPassword(userId, token, password));

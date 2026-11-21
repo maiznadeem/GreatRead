@@ -4,7 +4,7 @@
         {
             "source": "/(.*)",
             "headers": [
-                { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://storage.googleapis.com; font-src 'self'; connect-src 'self' https://api.greatread.himaiz.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'" },
+                { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://storage.googleapis.com; font-src 'self'; connect-src 'self' https://api.greatread.himaiz.com https://www.google.com/recaptcha/; frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'" },
                 { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains" },
                 { "key": "X-Frame-Options", "value": "DENY" },
                 { "key": "X-Content-Type-Options", "value": "nosniff" },

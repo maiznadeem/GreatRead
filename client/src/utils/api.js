@@ -1,5 +1,6 @@
 import axios from "axios";
 import { API_BASE_URL } from "../config";
+import { getRecaptchaToken } from "./recaptcha";
 
 const api = axios.create({
     baseURL: API_BASE_URL,
@@ -75,6 +76,7 @@ export async function purchaseBooksAPI(
             books: books,
             selectedButton: selectedButton,
             notesCategories: notesCategories,
+            recaptchaToken: await getRecaptchaToken("purchase"),
         });
         return response.data;
     } catch (error) {
