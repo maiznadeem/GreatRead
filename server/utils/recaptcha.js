@@ -4,6 +4,8 @@ const { recaptcha } = require('./config');
 const auth = new GoogleAuth({ scopes: 'https://www.googleapis.com/auth/cloud-platform' });
 const REJECTED = 'We could not verify this request. Please refresh the page and try again.';
 const TIMEOUT_MS = 5000;
+const MAX_TOKEN_LENGTH = 8192; // real tokens are a few KB at most
+const CLIENT_ERRORS = new Set([400, 413]);
 
 const assess = async (token, action, req) => {
     // A Headers instance (not a plain object), so set on it rather than spreading it.
@@ -17,7 +19,7 @@ const assess = async (token, action, req) => {
         }),
         signal: AbortSignal.timeout(TIMEOUT_MS),
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (!response.ok) throw Object.assign(new Error(`HTTP ${response.status}`), { status: response.status });
     return response.json();
 };
 
@@ -36,8 +38,8 @@ const requireRecaptcha = (action) => async (req, res, next) => {
     if (req.body) delete req.body.recaptchaToken;
     if (!recaptcha.enabled) return next();
 
-    if (typeof token !== 'string' || !token) {
-        console.warn(`reCAPTCHA rejected ${action}: missing token`);
+    if (typeof token !== 'string' || !token || token.length > MAX_TOKEN_LENGTH) {
+        console.warn(`reCAPTCHA rejected ${action}: missing or oversized token`);
         return res.status(403).json({ error: REJECTED });
     }
 
@@ -45,6 +47,12 @@ const requireRecaptcha = (action) => async (req, res, next) => {
     try {
         assessment = await assess(token, action, req);
     } catch (error) {
+        // 400/413 could come from what the client sent, so they fail closed. Timeouts, 5xx, quota (429) and our own
+        // credential errors (401/403) can't be caused by the client: fail open so the admin isn't locked out.
+        if (CLIENT_ERRORS.has(error.status)) {
+            console.warn(`reCAPTCHA rejected ${action}: Google returned ${error.message}`);
+            return res.status(403).json({ error: REJECTED });
+        }
         console.error(`reCAPTCHA check failed for ${action}, allowing request:`, error.message);
         return next();
     }
