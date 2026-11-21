@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { checkImage, safeImage } from "../lib/util";
 import { ImageIcon } from "./icons";
 
-export function ImagePicker({ label, file, onFile, existingUrl, error, required, hint, aspect = "aspect-[2/3]", width = "w-40" }) {
+export function ImagePicker({ label, file, onFile, existingUrl, error, required, hint, aspect = "aspect-2/3", width = "w-40" }) {
     const id = useId();
     const inputRef = useRef(null);
     const [preview, setPreview] = useState(null);

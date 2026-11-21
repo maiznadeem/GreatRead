@@ -1,7 +1,51 @@
+@import 'tailwindcss';
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@theme {
+    --color-primary: #956829;
+    --color-primaryDark: #8D5E20;
+    --color-secondary: #623A06;
+    --color-backgroundPrimary: #FFF8EC;
+    --color-footer: #F2EADF;
+
+    --breakpoint-custxs: 350px;
+    --breakpoint-custsm: 800px;
+    --breakpoint-custmd: 950px;
+    --breakpoint-custlg: 1100px;
+    --breakpoint-xl2: 1900px;
+}
+
+@utility scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #956829 white;
+}
+
+@utility scrollbar-webkit {
+    &::-webkit-scrollbar {
+        height: 8px;
+        width: 8px;
+    }
+    &::-webkit-scrollbar-track {
+        background: white;
+    }
+    &::-webkit-scrollbar-thumb {
+        background-color: #956829;
+        border-radius: 20px;
+        border: 1px solid white;
+    }
+}
+
+/* Tailwind v4 defaults differ from v3: keep the v3 border color, button cursor and placeholder color. */
+@layer base {
+    *, ::after, ::before, ::backdrop, ::file-selector-button {
+        border-color: var(--color-gray-200, currentcolor);
+    }
+    button:not(:disabled), [role="button"]:not(:disabled) {
+        cursor: pointer;
+    }
+    input::placeholder, textarea::placeholder {
+        color: var(--color-gray-400);
+    }
+}
 
 .manrope-semibold {
     font-family: 'Manrope', sans-serif;
@@ -33,12 +77,14 @@
     width: 100%;
 }
 
+@layer base {
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
+}
 }
 
 body {

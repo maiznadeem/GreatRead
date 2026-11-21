@@ -61,7 +61,7 @@ const NotesBook = ({ book, categories }) => {
     return (
         <div className="rounded-lg p-4 flex flex-col border-2 border-gray-400 border-dashed overflow-visible relative">
             <div className='flex flex-row gap-4'>
-                <div className={`w-32 h-52 sm:w-40 sm:h-64 relative rounded-lg shadow-xl -mt-16 -ml-10 overflow-hidden flex-shrink-0 cursor-pointer ${isBookInReadingList ? 'bg-black' : ''}`}
+                <div className={`w-32 h-52 sm:w-40 sm:h-64 relative rounded-lg shadow-xl -mt-16 -ml-10 overflow-hidden shrink-0 cursor-pointer ${isBookInReadingList ? 'bg-black' : ''}`}
                     onClick={() => {
                         if (urls.address.length == 0 && !urlsLoading) {
                             if (notesBooks.some((readingBook) => readingBook._id === book._id)) {

@@ -220,7 +220,7 @@ function EditorForm({ id, book, categoryNames }) {
                 <NotesEditor notes={form.notes} onChange={(notes) => setForm((f) => ({ ...f, notes }))} />
             </section>
 
-            <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-paper/95 px-4 py-3 backdrop-blur lg:left-64">
+            <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-paper/95 px-4 py-3 backdrop-blur-sm lg:left-64">
                 <div className="mx-auto flex max-w-6xl items-center justify-end gap-2 lg:px-6">
                     {dirty && <span className="mr-auto text-sm text-muted">Unsaved changes</span>}
                     <LinkButton to="/books" variant="quiet">Cancel</LinkButton>

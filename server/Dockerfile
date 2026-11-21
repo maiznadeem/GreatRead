@@ -1,4 +1,4 @@
-FROM node:24-trixie-slim
+FROM node:26-trixie-slim
 
 # LibreOffice converts the purchase DOCX to PDF (controllers/convertToPDF.js). The headless (-nogui) build keeps
 # the image near 1 GB; Alpine's package pulls in Qt/GTK/Mesa (~1.8 GB). The documents use Manrope SemiBold
@@ -11,7 +11,7 @@ RUN apt-get update \
 ENV NODE_ENV=production
 WORKDIR /app
 
-COPY package*.json .npmrc ./
+COPY package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
 # The purchase flow writes temporary .docx/.pdf files under ./assets, so the app user owns /app.

@@ -6,7 +6,7 @@ const Step1 = ({ name, handleNameChange }) => {
                 <p className='text-black text-center text-xl sm:text-2xl manrope-semibold'>{ name.trim() !== "" ? `Hi, ${name}` : "Create your reading goal"}</p>
                 <input
                     type="text"
-                    className='bg-white border-gray-400 border-[1px] sm:py-2 sm:px-4 px-3 py-2 w-[80%] sm:w-[70%] max-w-[400px] text-md sm:text-md manrope-regular text-black rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50'
+                    className='bg-white border-gray-400 border sm:py-2 sm:px-4 px-3 py-2 w-[80%] sm:w-[70%] max-w-[400px] text-md sm:text-md manrope-regular text-black rounded-md focus:outline-hidden focus:ring-2 focus:ring-primary/50'
                     placeholder='Enter your name...'
                     onChange={handleNameChange}
                 />

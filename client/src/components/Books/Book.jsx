@@ -59,7 +59,7 @@ const Book = ({ book, categories }) => {
     return (
         <div className="rounded-lg p-4 flex flex-col border-2 border-gray-400 border-dashed overflow-visible relative">
             <div className='flex flex-row gap-4'>
-                <div className={`w-32 h-52 sm:w-40 sm:h-64 relative rounded-lg shadow-xl -mt-16 -ml-10 overflow-hidden flex-shrink-0 ${isReadingListActive ? 'cursor-pointer' : '' } ${isBookInReadingList && isReadingListActive ? 'bg-black' : ''}`}
+                <div className={`w-32 h-52 sm:w-40 sm:h-64 relative rounded-lg shadow-xl -mt-16 -ml-10 overflow-hidden shrink-0 ${isReadingListActive ? 'cursor-pointer' : '' } ${isBookInReadingList && isReadingListActive ? 'bg-black' : ''}`}
                     onClick={() => {
                         if (isReadingListActive) {   
                             if (isBookInReadingList) {

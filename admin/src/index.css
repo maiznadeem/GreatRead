@@ -1,9 +1,27 @@
-@import "@fontsource-variable/manrope";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "@fontsource-variable/manrope" layer(base);
+@import "tailwindcss";
+
+@theme {
+    --font-sans: "Manrope Variable", system-ui, sans-serif;
+    --color-primary: #956829;
+    --color-primaryDark: #8D5E20;
+    --color-secondary: #623A06;
+    --color-paper: #FFF8EC;
+    --color-sand: #F2EADF;
+    --color-ink: #2B1A08;
+    --color-muted: #6B5A45;
+    --color-line: #E6D9C5;
+    --color-spine: #3A2306;
+    --color-danger: #A32A1C;
+    --color-ok: #2F6B3B;
+    --shadow-lift: 0 1px 2px rgba(60,35,6,.08), 0 8px 24px -12px rgba(60,35,6,.25);
+}
 
 @layer base {
+    /* Tailwind v4 defaults borders to currentcolor and buttons to the default cursor; keep the v3 look. */
+    *, ::after, ::before, ::backdrop, ::file-selector-button { border-color: var(--color-gray-200, currentcolor); }
+    button:not(:disabled), [role="button"]:not(:disabled) { cursor: pointer; }
+
     html { -webkit-text-size-adjust: 100%; }
     body {
         @apply bg-paper font-sans text-ink antialiased;
@@ -18,7 +36,7 @@
 
 @layer components {
     .btn {
-        @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-55;
+        @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm leading-5 font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-55;
     }
     .btn-primary { @apply bg-primaryDark text-white hover:bg-secondary; }
     .btn-quiet { @apply border border-line bg-white text-ink hover:bg-sand; }
@@ -26,7 +44,7 @@
     .btn-ghost { @apply text-secondary hover:bg-sand; }
     .btn-sm { @apply min-h-8 px-3 text-[13px]; }
     .input {
-        @apply block w-full rounded-lg border border-line bg-white px-3 py-2 text-[15px] text-ink placeholder:text-muted/70 focus:border-primaryDark focus:outline-none focus:ring-2 focus:ring-primaryDark/30;
+        @apply block w-full rounded-lg border border-line bg-white px-3 py-2 text-[15px] text-ink placeholder:text-muted/70 focus:border-primaryDark focus:outline-hidden focus:ring-2 focus:ring-primaryDark/30;
     }
     .input[aria-invalid="true"] { @apply border-danger; }
     .label { @apply mb-1.5 block text-sm font-semibold text-ink; }

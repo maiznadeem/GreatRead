@@ -70,7 +70,7 @@ export function Dialog({ open, onClose, title, children, footer, size = "md", di
                 aria-modal="true"
                 aria-labelledby={titleId}
                 tabIndex={-1}
-                className={`relative flex max-h-[92vh] w-full flex-col rounded-t-2xl bg-paper shadow-lift focus:outline-none sm:rounded-2xl ${width}`}
+                className={`relative flex max-h-[92vh] w-full flex-col rounded-t-2xl bg-paper shadow-lift focus:outline-hidden sm:rounded-2xl ${width}`}
             >
                 <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
                     <h2 id={titleId} className="text-lg font-extrabold text-secondary">{title}</h2>

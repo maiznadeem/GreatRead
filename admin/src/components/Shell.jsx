@@ -15,7 +15,7 @@ const NAV = [
 export function PageLoader() {
     return (
         <div className="flex min-h-screen items-center justify-center bg-paper text-primaryDark" role="status" aria-label="Loading">
-            <Spinner className="!h-6 !w-6" />
+            <Spinner className="h-6! w-6!" />
         </div>
     );
 }
@@ -39,7 +39,7 @@ function NavList({ onNavigate }) {
                     onClick={onNavigate}
                     className={({ isActive }) =>
                         `flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] font-semibold transition-colors ${
-                            isActive ? "bg-white/12 text-white shadow-[inset_3px_0_0_#E9C07A]" : "text-sand/80 hover:bg-white/8 hover:text-white"
+                            isActive ? "text-white shadow-[inset_3px_0_0_#E9C07A]" : "text-sand/80 hover:text-white"
                         }`
                     }
                 >
@@ -109,7 +109,7 @@ function Shell() {
 
     return (
         <div className="min-h-screen lg:pl-64">
-            <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[70] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:font-semibold">
+            <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-70 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:font-semibold">
                 Skip to content
             </a>
 

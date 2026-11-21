@@ -15,7 +15,7 @@ const ExampleNote = ({ book }) => {
     return (
         <div className="rounded-lg w-full flex flex-row max-w-[1080px]">
             <div className='w-full flex flex-col sm:flex-row justify-center items-center'>
-                <div className="w-36 h-56 sm:w-44 sm:h-64  rounded-lg shadow-2xl overflow-hidden flex-shrink-0 z-10"
+                <div className="w-36 h-56 sm:w-44 sm:h-64  rounded-lg shadow-2xl overflow-hidden shrink-0 z-10"
                 >
                     { !isImageLoaded && 
                         <Skeleton 

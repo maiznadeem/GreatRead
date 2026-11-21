@@ -50,7 +50,7 @@ export function NotesEditor({ notes, onChange }) {
     return (
         <div>
             <div className="mb-1.5 flex items-baseline justify-between">
-                <label htmlFor="note-draft" className="label !mb-0">Notes</label>
+                <label htmlFor="note-draft" className="label mb-0!">Notes</label>
                 <span className="text-[13px] text-muted" aria-live="polite">{notes.length} {notes.length === 1 ? "note" : "notes"}</span>
             </div>
             <div className="flex gap-2">
@@ -112,7 +112,7 @@ export function NotesEditor({ notes, onChange }) {
                                 </>
                             ) : (
                                 <>
-                                    <p className="min-w-0 flex-1 whitespace-pre-wrap break-words py-1 text-[15px]">{note}</p>
+                                    <p className="min-w-0 flex-1 whitespace-pre-wrap wrap-break-word py-1 text-[15px]">{note}</p>
                                     <div className="flex shrink-0 items-center">
                                         <button type="button" className="rounded-md p-1.5 text-muted hover:bg-sand disabled:opacity-30" onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Move note ${i + 1} up`}><UpIcon size={18} /></button>
                                         <button type="button" className="rounded-md p-1.5 text-muted hover:bg-sand disabled:opacity-30" onClick={() => move(i, 1)} disabled={i === notes.length - 1} aria-label={`Move note ${i + 1} down`}><DownIcon size={18} /></button>

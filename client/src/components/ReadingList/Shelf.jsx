@@ -198,7 +198,7 @@ const Shelf = forwardRef(function Shelf(props, ref) {
                                     {pages.map((pageBooks, pageIndex) => (
                                         <div
                                             key={pageIndex}
-                                            className="grid w-full flex-shrink-0"
+                                            className="grid w-full shrink-0"
                                             style={{
                                                 gridTemplateColumns: `repeat(${slidesToShow}, minmax(0, 1fr))`,
                                                 gridAutoRows: "160px",

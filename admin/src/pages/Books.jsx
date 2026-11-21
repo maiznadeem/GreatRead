@@ -76,7 +76,7 @@ function BookCard({ book, onDelete }) {
                     <LinkButton to={`/books/${book._id}`} variant="quiet" size="sm" aria-label={`Edit ${book.title}`}>
                         <EditIcon size={16} /> Edit
                     </LinkButton>
-                    <button type="button" className="btn btn-ghost btn-sm text-danger hover:!bg-red-50" onClick={() => onDelete(book)} aria-label={`Delete ${book.title}`}>
+                    <button type="button" className="btn btn-ghost btn-sm text-danger hover:bg-red-50!" onClick={() => onDelete(book)} aria-label={`Delete ${book.title}`}>
                         <TrashIcon size={16} /> Delete
                     </button>
                 </div>
@@ -176,7 +176,7 @@ export default function Books() {
                 <ul className="grid gap-3 md:grid-cols-2" aria-busy="true" aria-label="Loading books">
                     {[0, 1, 2, 3, 4, 5].map((i) => (
                         <li key={i} className="card flex gap-4 p-4">
-                            <div className="skeleton aspect-[2/3] w-24 shrink-0" />
+                            <div className="skeleton aspect-2/3 w-24 shrink-0" />
                             <div className="flex-1 space-y-2 pt-1">
                                 <div className="skeleton h-4 w-3/4" />
                                 <div className="skeleton h-3 w-1/2" />

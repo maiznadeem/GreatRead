@@ -31,7 +31,7 @@ const CategoryStep = ({ isBookLoading, selectedCategories, handleCategoryClick }
             ) : (
                 <div className='flex w-[100%] gap-x-2 overflow-x-auto scrollbar-thin scrollbar-webkit'>
                     {categories.map((category) => (
-                        <div key={category._id} className="flex-shrink-0 mb-1">
+                        <div key={category._id} className="shrink-0 mb-1">
                             <Category 
                                 isBookLoading={isBookLoading}
                                 category={category}
