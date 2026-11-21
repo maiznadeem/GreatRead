@@ -1,0 +1,13 @@
+# greatread.himaiz.com: static Vite build served by Cloudflare Workers static assets, behind the
+# himaiz.com zone's WAF. Built and deployed by Workers Builds (root directory client/, build command
+# `npm run build`, deploy command `npx wrangler deploy`). No Worker script runs, so requests are free.
+name = "greatread-web"
+compatibility_date = "2026-11-01"
+account_id = "803b01a6e3e53ef41f175e2a54e51372"
+workers_dev = false
+preview_urls = false
+routes = [{ pattern = "greatread.himaiz.com", custom_domain = true }]
+
+[assets]
+directory = "./dist"
+not_found_handling = "single-page-application"
