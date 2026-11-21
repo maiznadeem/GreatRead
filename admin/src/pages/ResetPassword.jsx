@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { AuthLayout } from "../components/AuthLayout";
 import { PasswordInput } from "../components/PasswordInput";
@@ -6,6 +6,7 @@ import { Button, Field, LinkButton } from "../components/ui";
 import { describedBy } from "../lib/util";
 import { api, errorText } from "../api";
 import { useTitle } from "../lib/hooks";
+import { getRecaptchaToken, loadRecaptcha } from "../lib/recaptcha";
 
 // Read the link params once, then remove them from the address bar so the
 // token never stays in history, screenshots or a copied URL.
@@ -23,6 +24,7 @@ function readLinkParams() {
 
 export default function ResetPassword() {
     useTitle("Choose a new password");
+    useEffect(() => { loadRecaptcha(); }, []);
     const [link] = useState(readLinkParams);
     const [password, setPassword] = useState("");
     const [confirm, setConfirm] = useState("");
@@ -45,7 +47,7 @@ export default function ResetPassword() {
 
         setPending(true);
         try {
-            await api.post("/auth/password/reset", { userId: link.id, token: link.token, password });
+            await api.post("/auth/password/reset", { userId: link.id, token: link.token, password, recaptchaToken: await getRecaptchaToken("reset_password") });
             setDone(true);
         } catch (err) {
             if (err.status === 400) {
@@ -107,6 +109,11 @@ export default function ResetPassword() {
                     />
                 </Field>
                 <Button type="submit" pending={pending} className="w-full">Update password</Button>
+                <p className="text-xs text-muted">
+                        This site is protected by reCAPTCHA and the Google{" "}
+                        <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer" className="underline">Privacy Policy</a> and{" "}
+                        <a href="https://policies.google.com/terms" target="_blank" rel="noreferrer" className="underline">Terms of Service</a> apply.
+                    </p>
             </form>
         </AuthLayout>
     );

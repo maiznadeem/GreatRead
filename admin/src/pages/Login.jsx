@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AuthLayout } from "../components/AuthLayout";
 import { PasswordInput } from "../components/PasswordInput";
@@ -8,9 +8,11 @@ import { PageLoader } from "../components/Shell";
 import { errorText } from "../api";
 import { useAuth } from "../lib/auth-context";
 import { useTitle } from "../lib/hooks";
+import { loadRecaptcha } from "../lib/recaptcha";
 
 export default function Login() {
     useTitle("Sign in");
+    useEffect(() => { loadRecaptcha(); }, []);
     const { status, login } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
@@ -77,6 +79,11 @@ export default function Login() {
                 <Button type="submit" pending={pending} className="w-full">
                     {pending ? "Signing in" : "Sign in"}
                 </Button>
+                <p className="text-xs text-muted">
+                        This site is protected by reCAPTCHA and the Google{" "}
+                        <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer" className="underline">Privacy Policy</a> and{" "}
+                        <a href="https://policies.google.com/terms" target="_blank" rel="noreferrer" className="underline">Terms of Service</a> apply.
+                    </p>
             </form>
             <p className="mt-6 text-sm">
                 <Link to="/forgot-password" className="font-semibold text-primaryDark underline underline-offset-2 hover:text-secondary">

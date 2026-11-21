@@ -125,3 +125,8 @@ body {
         width: 50%;
     }
 }
+
+/* Hidden as allowed by Google; the purchase area shows the required text instead. */
+.grecaptcha-badge {
+    visibility: hidden;
+}

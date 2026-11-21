@@ -10,6 +10,7 @@ import Slab from '../components/Slab/Slab';
 import NotesBooks from '../components/Slab/NotesBooks';
 import CategoriesModal from '../components/Product/CategoriesModal';
 import { getPaymentDetails } from '../utils/api';
+import { loadRecaptcha } from '../utils/recaptcha';
 
 const POLL_INTERVAL_MS = 4000;
 const POLL_TIMEOUT_MS = 90000;
@@ -27,6 +28,8 @@ const Notes = () => {
     const [paymentStatus, setPaymentStatus] = useState(sessionId ? 'loading' : 'idle');
     const [paymentError, setPaymentError] = useState('');
     const [attempt, setAttempt] = useState(0);
+
+    useEffect(() => { loadRecaptcha(); }, []);
 
     const handleRetry = () => {
         setPaymentError('');

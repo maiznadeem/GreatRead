@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { AuthLayout } from "../components/AuthLayout";
 import { Button, Field } from "../components/ui";
 import { describedBy } from "../lib/util";
 import { api, errorText } from "../api";
 import { useTitle } from "../lib/hooks";
+import { getRecaptchaToken, loadRecaptcha } from "../lib/recaptcha";
 
 export default function ForgotPassword() {
     useTitle("Forgot password");
+    useEffect(() => { loadRecaptcha(); }, []);
     const [email, setEmail] = useState("");
     const [error, setError] = useState("");
     const [pending, setPending] = useState(false);
@@ -22,7 +24,7 @@ export default function ForgotPassword() {
         setError("");
         setPending(true);
         try {
-            const d = await api.post("/auth/password/forgot", { email: email.trim() });
+            const d = await api.post("/auth/password/forgot", { email: email.trim(), recaptchaToken: await getRecaptchaToken("forgot_password") });
             setMessage(d?.message || "If that email belongs to an admin account, a reset link is on its way.");
         } catch (err) {
             setError(errorText(err));
@@ -64,6 +66,11 @@ export default function ForgotPassword() {
                     <Button type="submit" pending={pending} className="w-full">
                         Send reset link
                     </Button>
+                    <p className="text-xs text-muted">
+                        This site is protected by reCAPTCHA and the Google{" "}
+                        <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer" className="underline">Privacy Policy</a> and{" "}
+                        <a href="https://policies.google.com/terms" target="_blank" rel="noreferrer" className="underline">Terms of Service</a> apply.
+                    </p>
                 </form>
             )}
         </AuthLayout>

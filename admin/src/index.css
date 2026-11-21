@@ -34,6 +34,9 @@
     }
 }
 
+/* Hidden as allowed by Google; each protected form shows the required text instead. */
+.grecaptcha-badge { visibility: hidden; }
+
 @layer components {
     .btn {
         @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm leading-5 font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-55;
