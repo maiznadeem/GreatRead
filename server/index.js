@@ -1,5 +1,11 @@
 require('dotenv').config({ quiet: true });
 
+// On Cloud Run all secrets arrive in one Secret Manager secret, mounted as APP_SECRETS (a JSON object of strings).
+if (process.env.APP_SECRETS) {
+    Object.assign(process.env, JSON.parse(process.env.APP_SECRETS));
+    delete process.env.APP_SECRETS;
+}
+
 const REQUIRED_ENV = ['SESSION_SECRET', 'MONGO_DB_URL', 'STRIPE_PRIVATE_KEY', 'STRIPE_WEBHOOK_SECRET'];
 const missingEnv = REQUIRED_ENV.filter((name) => !process.env[name]);
 if (missingEnv.length) {
