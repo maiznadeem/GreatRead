@@ -23,6 +23,9 @@ const recaptcha = {
     projectId: process.env.RECAPTCHA_PROJECT_ID || 'maiz-portfolio',
     siteKey: process.env.RECAPTCHA_SITE_KEY || '6LdJoSsuAAAAAFOhxjEi7UgYJVnhWCDyx_w6eS0f',
     minScore: Number(process.env.RECAPTCHA_MIN_SCORE || 0.3),
+    // Sites whose tokens we accept. The key also allows localhost for local dev, but anyone can mint tokens there.
+    hostnames: (process.env.RECAPTCHA_HOSTNAMES || 'greatread.himaiz.com,admin.greatread.himaiz.com,great-read-maiz.vercel.app,great-read-dev.vercel.app')
+        .split(',').map((host) => host.trim()).filter(Boolean),
 };
 
 module.exports = { CLIENT_URL, ADMIN_URL, allowedOrigins, recaptcha };
