@@ -1,6 +1,6 @@
 [
     {
-      "origin": ["https://greatread.himaiz.com", "https://admin.greatread.himaiz.com", "http://localhost:5173", "http://localhost:5174"],
+      "origin": ["https://greatread.himaiz.com", "https://admin.greatread.himaiz.com"],
       "method": ["GET"],
       "responseHeader": ["Content-Type"],
       "maxAgeSeconds": 3600

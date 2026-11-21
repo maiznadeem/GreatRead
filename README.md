@@ -7,13 +7,12 @@
 - **Production:** [https://greatread.himaiz.com/](https://greatread.himaiz.com/)
 - **Admin:** [https://admin.greatread.himaiz.com/](https://admin.greatread.himaiz.com/)
 - **API:** [https://api.greatread.himaiz.com/](https://api.greatread.himaiz.com/)
-- **Development:** [https://great-read-dev.vercel.app/](https://great-read-dev.vercel.app/)
 
 ## Architecture
 
 | Part | Code | Hosting |
 |---|---|---|
-| Frontend (React + Vite) | `client/` | Vercel project `great-read` (`great-read-maiz.vercel.app`) |
+| Frontend (React + Vite) | `client/` | Vercel project `great-read` |
 | Admin (React + Vite) | `admin/` | Vercel project `great-read-admin` |
 | API (Express) | `server/` | Cloud Run service `great-read-maiz-portfolio`, project `maiz-portfolio`, `us-central1` |
 | DNS | — | Cloudflare (`himaiz.com`), DNS only: `greatread` and `admin.greatread` → Vercel, `api.greatread` → Cloud Run domain mapping |
@@ -49,20 +48,26 @@ and Liberation fonts are installed there).
   CNAME to `ghs.googlehosted.com`, DNS only; `himaiz.com` is verified in Search Console for the deploying account).
   The Stripe webhook endpoint points at `https://api.greatread.himaiz.com/webhooks/stripe`.
 - **Security:** sessions are HttpOnly, Secure, SameSite=Strict cookies on the API host; state-changing `/auth` and
-  `/admin` requests must come from an allowed `Origin`. Every route except the Stripe webhook is rate limited per IP
+  `/admin` requests must come from an allowed `Origin`. In production the API trusts only the two production sites
+  (`CLIENT_URL` and `ADMIN_URL`) for CORS, that origin check and reCAPTCHA token hostnames; `localhost` and the
+  `*.vercel.app` addresses are never trusted there (the Vercel addresses redirect to the custom domains).
+  Server-to-server calls, such as the Stripe webhook, send no `Origin` and are unaffected. Every route except the Stripe webhook is rate limited per IP
   (login and password reset also per email), with counters shared across instances in MongoDB (`rateLimits`).
 - **Google Cloud access:** the API's service account has only Storage Object Admin on the two buckets plus Token
   Creator on itself (to sign download URLs). It has no keys.
 - **Images:** uploads are re-encoded with `sharp` (`server/utils/images.js`): covers become JPEG up to 600×900
   (react-pdf in the reading-list export needs JPEG or PNG), category icons PNG up to 512 px.
-- **Bucket CORS:** `gcloud storage buckets update gs://greatread-books --cors-file=client/cors.json`.
+- **Bucket CORS:** `gcloud storage buckets update gs://greatread-books --cors-file=client/cors.json` (production
+  origins only).
 
 ## Local development
 
-- Server: copy the env keys above into `server/.env`, run
+- Server: copy the env keys above into `server/.env`, plus `ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174`
+  (local dev servers are trusted only through this) and `RECAPTCHA_ENABLED=false` (the reCAPTCHA key only works on
+  the production domains). Then run
   `gcloud auth application-default login --impersonate-service-account great-read-maiz-portfolio@maiz-portfolio.iam.gserviceaccount.com`
   (needs Token Creator on that account; there are no service account keys), then `npm run dev` in `server/`.
   PDF conversion needs LibreOffice: `soffice` on `PATH` or `SOFFICE_PATH` (or run the server image).
 - Client: `npm run dev` in `client/`; admin: `npm run dev` in `admin/` (port 5174). Requests go through the Vite
-  proxy to `VITE_API_PROXY_TARGET` (default: production API; use `http://localhost:8080` with a local server so the
-  session cookie works).
+  proxy to `VITE_API_PROXY_TARGET` (default: production API, which works for browsing only; use
+  `http://localhost:8080` with a local server for sign-in, admin and purchases).
