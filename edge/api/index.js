@@ -11,7 +11,13 @@ export default {
         headers.set('x-forwarded-host', url.host);
         headers.set('x-forwarded-proto', 'https');
 
-        return fetch(new URL(url.pathname + url.search, env.ORIGIN), {
+        // Copy the fixed origin and set only path and query. Resolving the path as a relative URL would let a
+        // path like "//evil.example/x" send the request (and the secret) to another host.
+        const target = new URL(env.ORIGIN);
+        target.pathname = url.pathname;
+        target.search = url.search;
+
+        return fetch(target, {
             method: request.method,
             headers,
             body: request.body,
