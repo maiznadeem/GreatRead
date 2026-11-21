@@ -14,7 +14,7 @@ const Preview = ({ previewOptions, setPreviewOptions }) => {
                 <div className='flex flex-col custmd:flex-row sm:gap-8'>
                     <div className='custlg:w-1/2 flex justify-center custlg:justify-end items-center sm:pt-8'>
                         <div className='bg-footer sm:p-16 rounded-2xl shadow-xl transform scale-90 sm:scale-100'>
-                        <div className='bg-white p-6 w-96 shadow-xl border-[1px] border-gray-200'>
+                        <div className='bg-white p-6 w-96 shadow-xl border border-gray-200'>
                             <div className='flex flex-col'>
                                 <div className='flex gap-5'>
                                     <div className='flex flex-col gap-2'>

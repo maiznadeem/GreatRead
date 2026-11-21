@@ -43,7 +43,7 @@ export function Field({ id, label, hint, error, children }) {
 export function Cover({ src, alt = "", className = "" }) {
     const url = safeImage(src);
     return (
-        <div className={`relative aspect-[2/3] overflow-hidden rounded-md bg-sand shadow-lift ${className}`}>
+        <div className={`relative aspect-2/3 overflow-hidden rounded-md bg-sand shadow-lift ${className}`}>
             {url ? (
                 <img src={url} alt={alt} loading="lazy" className="h-full w-full object-cover" />
             ) : (

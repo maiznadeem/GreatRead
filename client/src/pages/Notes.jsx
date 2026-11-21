@@ -127,7 +127,7 @@ const Notes = () => {
     }, [sessionId, attempt]);
 
     return (
-        <section className='my-6 sm:my-20 mx-4 sm:mx-8 min-h-[100vh]'>
+        <section className='my-6 sm:my-20 mx-4 sm:mx-8 min-h-screen'>
             <div className='flex flex-col items-center justify-center w-full'>
                 {(paymentStatus === 'loading' || paymentStatus === 'preparing') && (
                     <div role="status" className='flex items-center gap-3 mb-6 text-black text-center'>

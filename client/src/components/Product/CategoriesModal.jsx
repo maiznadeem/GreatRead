@@ -38,7 +38,7 @@ const CategoryStep = ({ selectedCategories, handleCategoryClick }) => {
             ) : (
                 <div className="flex flex-wrap gap-2">
                     {categories.map((category) => (
-                        <div key={category._id} className="flex-shrink-0">
+                        <div key={category._id} className="shrink-0">
                             <Category
                                 isBookLoading={false}
                                 category={category}

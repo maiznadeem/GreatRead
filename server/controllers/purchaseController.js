@@ -1,7 +1,7 @@
 const fs = require("fs");
 const axios = require("axios");
 const { Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, AlignmentType, ExternalHyperlink, PageBreak, CharacterSet, ShadingType } = require("docx");
-const { v4: uuidv4 } = require('uuid');
+const { randomUUID } = require('crypto');
 const stripe = require("../utils/stripe");
 const { storage, PURCHASE_BUCKET } = require("../utils/storage");
 const { toBookIds, isStringArray } = require("../utils/validate");
@@ -471,7 +471,7 @@ const getWordDocument = async ({ previewOps, bookIds }) => {
 
         doc.addSection(section);
 
-        const filename = uuidv4();
+        const filename = randomUUID();
 
         await Packer.toBuffer(doc).then((buffer) => {
             fs.writeFileSync(`./assets/${filename}.docx`, buffer);

@@ -65,7 +65,7 @@ export default function Dashboard() {
                     <div className="rounded-xl bg-sand px-4 pt-6 sm:px-8">
                         {picks.loading && !picks.data ? (
                             <div className="grid grid-cols-3 gap-3 pb-6 sm:gap-8">
-                                {[0, 1, 2].map((i) => <div key={i} className="skeleton aspect-[2/3]" />)}
+                                {[0, 1, 2].map((i) => <div key={i} className="skeleton aspect-2/3" />)}
                             </div>
                         ) : books.length === 0 ? (
                             <p className="pb-6 text-[15px] text-muted">Choose three books to feature on the site.</p>

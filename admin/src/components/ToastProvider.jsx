@@ -24,7 +24,7 @@ export function ToastProvider({ children }) {
         <ToastContext.Provider value={value}>
             {children}
             <div
-                className="pointer-events-none fixed inset-x-0 bottom-4 z-[60] flex flex-col items-center gap-2 px-4"
+                className="pointer-events-none fixed inset-x-0 bottom-4 z-60 flex flex-col items-center gap-2 px-4"
                 role="region"
                 aria-label="Notifications"
             >
@@ -39,12 +39,12 @@ export function ToastProvider({ children }) {
                         <span className="mt-0.5 shrink-0">
                             {t.kind === "error" ? <AlertIcon size={18} /> : <CheckIcon size={18} />}
                         </span>
-                        <span className="min-w-0 flex-1 break-words">{t.message}</span>
+                        <span className="min-w-0 flex-1 wrap-break-word">{t.message}</span>
                         <button
                             type="button"
                             onClick={() => dismiss(t.id)}
                             aria-label="Dismiss notification"
-                            className="shrink-0 rounded p-0.5 hover:bg-white/15"
+                            className="shrink-0 rounded-sm p-0.5 hover:bg-white/15"
                         >
                             <CloseIcon size={16} />
                         </button>

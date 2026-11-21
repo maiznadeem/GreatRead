@@ -24,7 +24,7 @@ const ReadingList = () => {
                     opacity: { type: 'spring', stiffness: 100, damping: 20 },
                     scale: { type: 'spring', stiffness: 180, damping: 12 },
                 }}
-                className={`flex flex-col items-center gap-4 rounded-xl shadow-xl ${readingInfo ? 'w-full sm:w-[80%] md:w-[100%] max-w-[680px]' : 'max-w-[100%] md:max-w-[600px]'}`}
+                className={`flex flex-col items-center gap-4 rounded-xl shadow-xl ${readingInfo ? 'w-full sm:w-[80%] md:w-[100%] max-w-[680px]' : 'max-w-full md:max-w-[600px]'}`}
             >
                 <IconButton
                     onClick={handleReadingListClose}

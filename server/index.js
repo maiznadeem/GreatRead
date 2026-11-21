@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ quiet: true });
 
 const REQUIRED_ENV = ['SESSION_SECRET', 'MONGO_DB_URL', 'STRIPE_PRIVATE_KEY', 'STRIPE_WEBHOOK_SECRET'];
 const missingEnv = REQUIRED_ENV.filter((name) => !process.env[name]);

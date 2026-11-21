@@ -22,7 +22,7 @@ export function AuthLayout({ title, subtitle, children, footer }) {
                             className={`w-8 rounded-t-sm ${i % 3 === 0 ? "bg-primary" : i % 3 === 1 ? "bg-[#E9C07A]" : "bg-secondary"}`}
                         />
                     ))}
-                    <span className="ml-2 h-1 flex-1 rounded bg-sand/30" />
+                    <span className="ml-2 h-1 flex-1 rounded-sm bg-sand/30" />
                 </div>
             </aside>
 

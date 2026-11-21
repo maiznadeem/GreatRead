@@ -177,7 +177,7 @@ const DefaultPagination = ({ currentPage, limit, totalResults, onPageChange }) =
         <div className="border-t border-gray-300 bg-background px-4 py-3 sm:px-6">
             <div className="flex flex-col gap-0 sm:gap-4 items-center justify-between sm:flex-1 sm:items-center sm:justify-between">
                 <div>
-                    <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm scale-65 sm:scale-100" aria-label="Pagination">
+                    <nav className="isolate inline-flex -space-x-px rounded-md shadow-xs scale-65 sm:scale-100" aria-label="Pagination">
                         <button
                             onClick={() => handlePageChange(current - 1)}
                             className={`min-w-[40px] justify-center relative inline-flex items-center rounded-l-md px-2 py-2 text-black ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 ${

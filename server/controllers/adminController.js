@@ -1,4 +1,4 @@
-const { v4: uuidv4 } = require('uuid');
+const { randomUUID } = require('crypto');
 
 const { storage, BOOKS_BUCKET } = require('../utils/storage');
 const { compressImage } = require('../utils/images');
@@ -49,7 +49,7 @@ async function saveImage(file, folderName) {
     } catch (error) {
         throw badRequest('image could not be processed.');
     }
-    const objectName = `${folderName}/${uuidv4()}.${image.ext}`;
+    const objectName = `${folderName}/${randomUUID()}.${image.ext}`;
     await storage.bucket(BOOKS_BUCKET).file(objectName).save(image.buffer, {
         contentType: image.mime,
         metadata: { cacheControl: 'public, max-age=31536000, immutable' },

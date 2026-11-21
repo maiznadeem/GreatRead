@@ -118,7 +118,7 @@ const Banner = () => {
                                 </button>
                             </div>
                         </div>
-                        <div className='w-full lg:w-1/3 flex flex-col justify-between items-center bg-[#EFE5D8] rounded-xl shadow-xl px-6 lg:px-12 py-6 sm:py-8 relative -order-last custmd:-order-none'>
+                        <div className='w-full lg:w-1/3 flex flex-col justify-between items-center bg-[#EFE5D8] rounded-xl shadow-xl px-6 lg:px-12 py-6 sm:py-8 relative order-first custmd:order-none'>
                             <p className='manrope-semibold text-2xl custlg:text-3xl text-center text-black'>
                                 Top 3 Picks
                             </p>

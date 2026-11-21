@@ -75,7 +75,7 @@ function CategoryForm({ category, onClose, onSaved }) {
                     />
                 </Field>
                 <label className="flex cursor-pointer items-center gap-3">
-                    <input type="checkbox" role="switch" checked={bestseller} onChange={(e) => setBestseller(e.target.checked)} className="h-5 w-5 rounded border-line accent-primaryDark" />
+                    <input type="checkbox" role="switch" checked={bestseller} onChange={(e) => setBestseller(e.target.checked)} className="h-5 w-5 rounded-sm border-line accent-primaryDark" />
                     <span className="text-sm font-semibold">Mark as Bestseller</span>
                 </label>
                 <ImagePicker
@@ -85,7 +85,7 @@ function CategoryForm({ category, onClose, onSaved }) {
                     onFile={setFile}
                     existingUrl={category?.image}
                     error={errors.image}
-                    aspect="aspect-[4/3]"
+                    aspect="aspect-4/3"
                     width="w-44"
                     hint={editing ? "Leave empty to keep the current image. JPEG, PNG, WebP or GIF, up to 5 MB." : undefined}
                 />
@@ -157,11 +157,11 @@ export default function Categories() {
                 <ul className={`grid grid-cols-1 gap-4 min-[480px]:grid-cols-2 lg:grid-cols-3 ${loading ? "opacity-60" : ""} transition-opacity`}>
                     {items.map((c) => (
                         <li key={c._id} className="card flex flex-col overflow-hidden">
-                            <div className="relative aspect-[16/9] overflow-hidden bg-sand">
+                            <div className="relative aspect-video overflow-hidden bg-sand">
                                 {c.image?.startsWith("https://") ? (
                                     <img src={c.image} alt="" loading="lazy" className="h-full w-full object-contain p-5" />
                                 ) : (
-                                    <Cover className="!aspect-auto h-full w-full rounded-none shadow-none" />
+                                    <Cover className="aspect-auto! h-full w-full rounded-none shadow-none" />
                                 )}
                                 {c.bestseller && (
                                     <span className="absolute left-2 top-2 rounded-full bg-secondary px-2.5 py-0.5 text-xs font-bold text-white">Bestseller</span>
@@ -174,7 +174,7 @@ export default function Categories() {
                                     <Button variant="quiet" size="sm" onClick={() => setForm({ category: c })} aria-label={`Edit ${c.name}`}>
                                         <EditIcon size={16} /> Edit
                                     </Button>
-                                    <Button variant="ghost" size="sm" className="text-danger hover:!bg-red-50" onClick={() => setTarget(c)} aria-label={`Delete ${c.name}`}>
+                                    <Button variant="ghost" size="sm" className="text-danger hover:bg-red-50!" onClick={() => setTarget(c)} aria-label={`Delete ${c.name}`}>
                                         <TrashIcon size={16} /> Delete
                                     </Button>
                                 </div>

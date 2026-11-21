@@ -131,7 +131,7 @@ export default function TopPicks() {
                         {slots.map((book, i) => (
                             <li key={i} className="min-w-0">
                                 {loading && !data ? (
-                                    <div className="skeleton aspect-[2/3]" />
+                                    <div className="skeleton aspect-2/3" />
                                 ) : book ? (
                                     <>
                                         <Cover src={book.image} alt={`Cover of ${book.title}`} />
@@ -147,7 +147,7 @@ export default function TopPicks() {
                                         type="button"
                                         onClick={() => setPicking(i)}
                                         aria-label={`Choose book for pick ${i + 1}`}
-                                        className="flex aspect-[2/3] w-full flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed border-line bg-paper px-1 text-center text-sm font-semibold text-primaryDark hover:bg-sand"
+                                        className="flex aspect-2/3 w-full flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed border-line bg-paper px-1 text-center text-sm font-semibold text-primaryDark hover:bg-sand"
                                     >
                                         <PlusIcon />
                                         Pick {i + 1}

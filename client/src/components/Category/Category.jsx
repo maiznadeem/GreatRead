@@ -7,7 +7,7 @@ const Category = ({ isBookLoading, category, isActive, handleCategoryClick }) =>
         handleCategoryClick(category.name);
     };
 
-    const containerClasses = `bg-${isActive ? 'primary' : 'backgroundPrimary'} border-[1px] border-primary h-full rounded-lg shadow-md p-2 flex items-center justify-between hover:cursor-pointer transition-all duration-300 ease-in-out`;
+    const containerClasses = `bg-${isActive ? 'primary' : 'backgroundPrimary'} border border-primary h-full rounded-lg shadow-md p-2 flex items-center justify-between hover:cursor-pointer transition-all duration-300 ease-in-out`;
     const textClasses = `text-${isActive ? 'white' : 'black'} manrope-semibold text-xs sm:text-md`;
 
     const image = category.image ? (
