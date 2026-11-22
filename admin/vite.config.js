@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => {
     return {
         plugins: [react()],
         server: { port: 5174, proxy: { "/auth": proxy, "/admin": proxy } },
-        // Never inline assets as data: URLs; the CSP (vercel.json) only allows fonts and scripts from 'self'.
+        // Never inline assets as data: URLs; the CSP (public/_headers) only allows fonts and scripts from 'self'.
         build: { assetsInlineLimit: 0 },
     };
 });

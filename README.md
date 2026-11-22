@@ -12,10 +12,11 @@
 
 | Part | Code | Hosting |
 |---|---|---|
-| Frontend (React + Vite) | `client/` | Vercel project `great-read` |
-| Admin (React + Vite) | `admin/` | Vercel project `great-read-admin` |
+| Frontend (React + Vite) | `client/` | Cloudflare Worker `greatread-web` (static assets) |
+| Admin (React + Vite) | `admin/` | Cloudflare Worker `greatread-admin` (static assets) |
+| API edge | `edge/api/` | Cloudflare Worker `greatread-api-edge`, forwarding to Cloud Run |
 | API (Express) | `server/` | Cloud Run service `great-read-maiz-portfolio`, project `maiz-portfolio`, `us-central1` |
-| DNS | — | Cloudflare (`himaiz.com`), DNS only: `greatread` and `admin.greatread` → Vercel, `api.greatread` → Cloud Run domain mapping |
+| DNS and WAF | — | Cloudflare zone `himaiz.com`; all three hostnames are Worker custom domains behind the zone's WAF rules |
 
 Integrations: MongoDB Atlas, Stripe Checkout + webhook (`/webhooks/stripe`), Google Cloud Storage
 (`greatread-books` for public images, `greatread-purchases` for paid downloads via signed URLs; both in
@@ -26,9 +27,14 @@ and Liberation fonts are installed there).
 ## Deployment
 
 - **CI:** `.github/workflows/ci.yml` lints and builds the client and admin apps and checks the server on every push and PR.
-- **Frontends:** Vercel deploys `main` to production automatically (`client/` and `admin/` are separate projects).
-  Optional build env vars: `VITE_API_BASE_URL` (both) and `VITE_SITE_URL` (client); defaults are the production hostnames above.
-  Security headers (CSP, HSTS, framing) live in each app's `vercel.json`.
+- **Frontends:** Cloudflare Workers Builds deploys each app on every push to `main` that touches its folder
+  (`client/*` or `admin/*`), running `npm run build` and `npx wrangler deploy` from that folder (`wrangler.toml`).
+  Preview builds are off. Optional build env vars: `VITE_API_BASE_URL` (both) and `VITE_SITE_URL` (client); defaults
+  are the production hostnames above. Security headers (CSP, HSTS, framing) and asset caching live in each app's
+  `public/_headers`.
+- **API edge:** `edge/api` forwards every request to the Cloud Run URL with a shared secret (`X-Origin-Auth`) and the
+  visitor's address (`X-Client-IP`); `server/utils/originAuth.js` rejects requests without the secret, so the
+  `run.app` URL returns 403. Deploy changes with `npx wrangler deploy` from `edge/api`.
 - **Backend:** a Cloud Build trigger in `maiz-portfolio` builds `server/Dockerfile` and deploys on every push to
   `main`, then deletes the image from Artifact Registry: Cloud Run keeps its own copy, so the registry stays empty
   and free (a cleanup policy deletes anything older than a day as a backstop). A rollback means redeploying an older
@@ -43,14 +49,13 @@ and Liberation fonts are installed there).
   `GCS_BUCKET`, `GCS_PURCHASE_BUCKET`, `RECAPTCHA_*`). `server/update-config.sh` applies both and rebuilds from
   source, because a config change needs an image, then empties the registry again. Locally, `server/.env` holds
   everything as plain variables.
-- **Custom domains:** `greatread.himaiz.com` and `admin.greatread.himaiz.com` are domains on their Vercel projects
-  (Cloudflare CNAMEs to Vercel, DNS only). `api.greatread.himaiz.com` is a Cloud Run domain mapping (Cloudflare
-  CNAME to `ghs.googlehosted.com`, DNS only; `himaiz.com` is verified in Search Console for the deploying account).
-  The Stripe webhook endpoint points at `https://api.greatread.himaiz.com/webhooks/stripe`.
+- **Custom domains:** `greatread.himaiz.com`, `admin.greatread.himaiz.com` and `api.greatread.himaiz.com` are
+  custom domains of the three Workers (each `wrangler.toml` declares its own), so the zone's WAF runs in front of all
+  of them. The Stripe webhook endpoint points at `https://api.greatread.himaiz.com/webhooks/stripe`.
 - **Security:** sessions are HttpOnly, Secure, SameSite=Strict cookies on the API host; state-changing `/auth` and
   `/admin` requests must come from an allowed `Origin`. In production the API trusts only the two production sites
-  (`CLIENT_URL` and `ADMIN_URL`) for CORS, that origin check and reCAPTCHA token hostnames; `localhost` and the
-  `*.vercel.app` addresses are never trusted there (the Vercel addresses redirect to the custom domains).
+  (`CLIENT_URL` and `ADMIN_URL`) for CORS, that origin check and reCAPTCHA token hostnames; `localhost` is never
+  trusted there.
   Server-to-server calls, such as the Stripe webhook, send no `Origin` and are unaffected. Every route except the Stripe webhook is rate limited per IP
   (login and password reset also per email), with counters shared across instances in MongoDB (`rateLimits`).
 - **Google Cloud access:** the API's service account has only Storage Object Admin on the two buckets plus Token
