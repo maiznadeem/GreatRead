@@ -1,7 +1,7 @@
 # GreatRead admin
 
 React 19 + Vite 8 + Tailwind 3 single-page app for managing books, categories and top picks.
-Production: `https://admin.greatread.himaiz.com` (Vercel), talking to `https://api.greatread.himaiz.com`.
+Production: `https://admin.greatread.himaiz.com` (Cloudflare Worker `greatread-admin`), talking to `https://api.greatread.himaiz.com`.
 
 ## Scripts
 
@@ -22,8 +22,8 @@ only works against an API that allows it (for example a local server on the same
 
 ## Deployment
 
-Deploy the `admin/` directory as a Vercel project (framework: Vite, build `npm run build`, output `dist`).
-`vercel.json` rewrites every route to `/index.html` and sets a strict CSP and other security headers.
-If the API origin changes, update `connect-src` in `vercel.json` too.
+Cloudflare Workers Builds deploys this folder on every push to `main` that touches `admin/*` (`npm run build`, then
+`npx wrangler deploy` with `wrangler.toml`). Unknown routes fall back to `/index.html`, and `public/_headers` sets a
+strict CSP and other security headers. If the API origin changes, update `connect-src` in `public/_headers` too.
 Fonts are bundled (`@fontsource-variable/manrope`); there are no third-party requests besides cover images
 from `https://storage.googleapis.com`.
