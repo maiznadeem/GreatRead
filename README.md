@@ -51,8 +51,12 @@ and Liberation fonts are installed there).
 - **Runtime config:** secrets live in one Secret Manager secret, `greatread-secrets`: a JSON object with
   `MONGO_DB_URL`, `SESSION_SECRET`, `EMAIL_PASS`, `STRIPE_PRIVATE_KEY`, `STRIPE_WEBHOOK_SECRET` and `ORIGIN_AUTH`. Cloud Run mounts
   it as `APP_SECRETS`, and `server/index.js` copies its keys into `process.env` at startup. Only the service
-  account can read it. Keep only the latest version: after adding one, destroy the old one
-  (`gcloud secrets versions destroy`). Non-secret settings are plain env vars in the gitignored
+  account can read it. Keep only the latest version. To change a secret: add the new version, roll out a
+  new revision by rebuilding (run the Cloud Build trigger on `main`, or `server/update-config.sh`), check
+  the API, then destroy the old version (`gcloud secrets versions destroy`). Cloud Run reads `latest` when
+  an instance starts, so running instances keep the old value until they stop. A settings-only
+  `gcloud run services update` can't force the switch: it fails with "Image not found" because the
+  registry is kept empty. Non-secret settings are plain env vars in the gitignored
   `server/.cloudrun-env.yaml`: `CLIENT_URL`, `ADMIN_URL`, `EMAIL_USER`, `BCRYPT_SALT` (optional: `ALLOWED_ORIGINS`,
   `GCS_BUCKET`, `GCS_PURCHASE_BUCKET`, `RECAPTCHA_*`). `server/update-config.sh` applies both and rebuilds from
   source, because a config change needs an image, then empties the registry again. Locally, `server/.env` holds
