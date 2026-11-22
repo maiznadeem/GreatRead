@@ -1,8 +1,8 @@
 // Cloudflare Worker on api.greatread.himaiz.com: the zone's WAF runs before it, then it forwards every request
 // unchanged to the Cloud Run service, adding the shared secret the API requires and the visitor's address.
 // Bodies stream through (Stripe webhooks keep their exact bytes) and WebSocket upgrades pass through.
-// Each request is logged as one JSON line (OracleVMOps LOGGING.md) and carries CF-Ray to the API, which logs it
-// as `ray`, so one ray finds the request at the edge and at the API.
+// Each request is logged as one JSON line (OracleVMOps LOGGING.md) and carries the visitor's CF-Ray to the API as
+// X-CF-Ray, which the API logs as `ray`, so one ray finds the request at the edge and at the API.
 
 // The first path segment only (`/get/*`): the full path can carry ids and tokens.
 const routeOf = (pathname) => {
@@ -16,12 +16,13 @@ export default {
         const url = new URL(request.url);
         const ray = request.headers.get('cf-ray') ?? '';
         const headers = new Headers(request.headers);
-        for (const name of ['host', 'x-origin-auth', 'x-client-ip', 'x-forwarded-host', 'x-forwarded-proto']) headers.delete(name);
+        for (const name of ['host', 'x-origin-auth', 'x-client-ip', 'x-forwarded-host', 'x-forwarded-proto', 'x-cf-ray']) headers.delete(name);
         headers.set('x-origin-auth', env.ORIGIN_AUTH);
         headers.set('x-client-ip', request.headers.get('cf-connecting-ip') ?? '');
         headers.set('x-forwarded-host', url.host);
         headers.set('x-forwarded-proto', 'https');
-        headers.set('cf-ray', ray);
+        // Cloudflare gives this Worker's call to the origin a new CF-Ray, so the visitor's ray travels as X-CF-Ray.
+        headers.set('x-cf-ray', ray);
 
         // Copy the fixed origin and set only path and query. Resolving the path as a relative URL would let a
         // path like "//evil.example/x" send the request (and the secret) to another host.
