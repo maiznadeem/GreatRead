@@ -1,4 +1,5 @@
-# Deploy: from edge/api, with CLOUDFLARE_API_TOKEN set: npx wrangler@4 deploy
+# Deployed by Workers Builds on every push to main that touches edge/api/* (root edge/api, no build step,
+# `npx wrangler deploy`). Manual fallback: from edge/api, with CLOUDFLARE_API_TOKEN set: npx wrangler@4 deploy
 # The secret is set once with: npx wrangler@4 secret put ORIGIN_AUTH (same value as ORIGIN_AUTH in greatread-secrets)
 name = "greatread-api-edge"
 main = "index.js"

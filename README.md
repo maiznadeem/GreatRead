@@ -33,15 +33,23 @@ and Liberation fonts are installed there).
   are the production hostnames above. Security headers (CSP, HSTS, framing) and asset caching live in each app's
   `public/_headers`.
 - **API edge:** `edge/api` forwards every request to the Cloud Run URL with a shared secret (`X-Origin-Auth`) and the
-  visitor's address (`X-Client-IP`); `server/utils/originAuth.js` rejects requests without the secret, so the
-  `run.app` URL returns 403. Deploy changes with `npx wrangler deploy` from `edge/api`.
+  visitor's address (`X-Client-IP`); `server/utils/originAuth.js` rejects requests without the secret
+  (`ORIGIN_AUTH_MODE=enforce`), so the `run.app` URL returns 403. The secret is the Worker secret `ORIGIN_AUTH` and the
+  `ORIGIN_AUTH` key in `greatread-secrets`; both must match. Workers Builds deploys the edge on every push to `main`
+  that touches `edge/api/*` (no build step, `npx wrangler deploy`); Worker secrets survive deploys.
+- **Rollback (Workers):** Cloudflare dashboard → the Worker → Deployments → roll back to an earlier version, or
+  `npx wrangler rollback` from the app's folder.
+- **WAF:** the `himaiz.com` zone runs Cloudflare's Free Managed Ruleset plus shared custom rules (scanner paths and
+  unused methods blocked; `api.greatread` skips the browser checks meant for people, so Stripe webhooks pass). The
+  zone's rules are shared by every project and managed outside this repo; change them there, not per app.
 - **Backend:** a Cloud Build trigger in `maiz-portfolio` builds `server/Dockerfile` and deploys on every push to
-  `main`, then deletes the image from Artifact Registry: Cloud Run keeps its own copy, so the registry stays empty
+  `main` that touches `server/**` (its `includedFiles` filter; site, edge and docs changes don't redeploy the API),
+  then deletes the image from Artifact Registry: Cloud Run keeps its own copy, so the registry stays empty
   and free (a cleanup policy deletes anything older than a day as a backstop). A rollback means redeploying an older
   commit. The service runs as `great-read-maiz-portfolio@maiz-portfolio.iam.gserviceaccount.com`, which also signs
   GCS URLs.
 - **Runtime config:** secrets live in one Secret Manager secret, `greatread-secrets`: a JSON object with
-  `MONGO_DB_URL`, `SESSION_SECRET`, `EMAIL_PASS`, `STRIPE_PRIVATE_KEY` and `STRIPE_WEBHOOK_SECRET`. Cloud Run mounts
+  `MONGO_DB_URL`, `SESSION_SECRET`, `EMAIL_PASS`, `STRIPE_PRIVATE_KEY`, `STRIPE_WEBHOOK_SECRET` and `ORIGIN_AUTH`. Cloud Run mounts
   it as `APP_SECRETS`, and `server/index.js` copies its keys into `process.env` at startup. Only the service
   account can read it. Keep only the latest version: after adding one, destroy the old one
   (`gcloud secrets versions destroy`). Non-secret settings are plain env vars in the gitignored
@@ -58,6 +66,9 @@ and Liberation fonts are installed there).
   trusted there.
   Server-to-server calls, such as the Stripe webhook, send no `Origin` and are unaffected. Every route except the Stripe webhook is rate limited per IP
   (login and password reset also per email), with counters shared across instances in MongoDB (`rateLimits`).
+- **Bot protection:** reCAPTCHA Enterprise (score-based, no checkbox) guards admin login, forgot and reset password
+  and the public purchase POST (`server/utils/recaptcha.js`): minimum score 0.3, tokens only from the production
+  hostnames, fail-open on Google outages (logged). Kill switch: Cloud Run env `RECAPTCHA_ENABLED=false`.
 - **Google Cloud access:** the API's service account has only Storage Object Admin on the two buckets plus Token
   Creator on itself (to sign download URLs). It has no keys.
 - **Images:** uploads are re-encoded with `sharp` (`server/utils/images.js`): covers become JPEG up to 600×900
