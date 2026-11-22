@@ -34,7 +34,8 @@ and Liberation fonts are installed there).
   `public/_headers`.
 - **API edge:** `edge/api` forwards every request to the Cloud Run URL with a shared secret (`X-Origin-Auth`) and the
   visitor's address (`X-Client-IP`); `server/utils/originAuth.js` rejects requests without the secret
-  (`ORIGIN_AUTH_MODE=enforce`), so the `run.app` URL returns 403. The secret is the Worker secret `ORIGIN_AUTH` and the
+  (`ORIGIN_AUTH_MODE=enforce`), so the `run.app` URL returns 403. In enforce mode the server refuses to start
+  without `ORIGIN_AUTH`, so a revision missing the secret never takes traffic instead of opening the URL. The secret is the Worker secret `ORIGIN_AUTH` and the
   `ORIGIN_AUTH` key in `greatread-secrets`; both must match. Workers Builds deploys the edge on every push to `main`
   that touches `edge/api/*` (no build step, `npx wrangler deploy`); Worker secrets survive deploys.
 - **Rollback (Workers):** Cloudflare dashboard → the Worker → Deployments → roll back to an earlier version, or

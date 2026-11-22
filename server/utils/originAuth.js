@@ -3,9 +3,12 @@ const { timingSafeEqual } = require('crypto');
 // The public API hostname is a Cloudflare Worker (WAF in front) that forwards to this Cloud Run service with
 // X-Origin-Auth set to a shared secret and X-Client-IP set to the visitor's address. Requests that skip
 // Cloudflare (the *.run.app URL) don't carry the secret. ORIGIN_AUTH_MODE=enforce rejects them; any other
-// value only logs them, for rollout. Without ORIGIN_AUTH (local development) the check is off.
+// value only logs them, for rollout. Without ORIGIN_AUTH (local development) the check is off, except under
+// enforce: then a missing secret stops the server, so a revision without it never goes live and the run.app
+// URL can't quietly open up.
 const secret = process.env.ORIGIN_AUTH ? Buffer.from(process.env.ORIGIN_AUTH) : null;
 const enforce = process.env.ORIGIN_AUTH_MODE === 'enforce';
+if (enforce && !secret) throw new Error('ORIGIN_AUTH_MODE=enforce but ORIGIN_AUTH is missing; refusing to start');
 
 const fromWorker = (req) => {
     const sent = req.get('x-origin-auth');
