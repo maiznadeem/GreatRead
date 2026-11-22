@@ -10,6 +10,7 @@ const stripe = require('../utils/stripe');
 const { fulfillPayment } = require('../controllers/purchaseController');
 const { escapeRegex, isObjectId, isStringArray, toBookIds } = require('../utils/validate');
 const { getPaymentLimiter } = require('../utils/rateLimiters');
+const { log, errorFields, errorType } = require('../utils/log.js');
 
 const MAX_SEARCH_LENGTH = 100;
 const MAX_OFFSET = 100000;
@@ -50,7 +51,7 @@ getRoute.post('/books', async (req, res) => {
             totalCount,
         });
     } catch (error) {
-        console.error('Error fetching books:', error);
+        log.error('query_failed', 'Could not fetch books', errorFields(error));
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -68,7 +69,7 @@ getRoute.get('/toppicks', async (req, res) => {
         }
         res.json(topPicks);
     } catch (error) {
-        console.error('Error fetching top picks:', error);
+        log.error('query_failed', 'Could not fetch top picks', errorFields(error));
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -78,7 +79,7 @@ getRoute.get('/quotes', async (req, res) => {
         const quotes = await Quote.find();
         res.json(quotes);
     } catch (error) {
-        console.error('Error fetching quotes:', error);
+        log.error('query_failed', 'Could not fetch quotes', errorFields(error));
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -92,7 +93,7 @@ getRoute.get('/randomquotes', async (req, res) => {
         ]);
         res.json(response);
     } catch (error) {
-        console.error('Error fetching random quotes:', error);
+        log.error('query_failed', 'Could not fetch random quotes', errorFields(error));
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -102,7 +103,7 @@ getRoute.get('/categories', async (req, res) => {
         const categories = await Category.find({ bestseller: false });
         res.json(categories);
     } catch (error) {
-        console.error('Error fetching categories:', error);
+        log.error('query_failed', 'Could not fetch categories', errorFields(error));
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -121,7 +122,7 @@ async function getRandomBooksByCategoriesFromDB(categories, goal, bookIds) {
             { $sample: { size: goal } },
         ]);
     } catch (error) {
-        console.error('Error fetching books by categories:', error);
+        log.error('query_failed', 'Could not fetch books by categories', errorFields(error));
         throw new Error('Could not fetch books by categories from the database.');
     }
 }
@@ -137,7 +138,7 @@ getRoute.post('/getRandomBooks', async (req, res) => {
         const randomBooks = await getRandomBooksByCategoriesFromDB(categories, goalNum, bookIds);
         res.json(randomBooks);
     } catch (error) {
-        console.error('Error fetching random books by categories:', error);
+        log.error('query_failed', 'Could not fetch random books by categories', errorFields(error));
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -166,7 +167,7 @@ getRoute.post('/getPayment', getPaymentLimiter, async (req, res) => {
                     payment.success = true;
                 }
             } catch (err) {
-                console.error('Error verifying Stripe session:', err.message);
+                log.warn('stripe_verify_failed', 'Could not verify Stripe session', errorType(err));
             }
         }
 
@@ -202,7 +203,7 @@ getRoute.post('/getPayment', getPaymentLimiter, async (req, res) => {
 
         return res.json(result);
     } catch (error) {
-        console.error('Error retrieving payment:', error);
+        log.error('query_failed', 'Could not retrieve payment', errorFields(error));
         return res.status(500).json({ error: 'Internal server error' });
     }
 });

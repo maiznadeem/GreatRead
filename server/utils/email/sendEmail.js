@@ -2,6 +2,7 @@ const nodemailer = require("nodemailer");
 const handlebars = require("handlebars");
 const fs = require("fs");
 const path = require("path");
+const { log, errorType } = require('../log.js');
 
 const sendEmail = async (email, subject, payload, template) => {
     const source = await fs.promises.readFile(path.join(__dirname, template), "utf8");
@@ -21,7 +22,7 @@ const sendEmail = async (email, subject, payload, template) => {
             html: handlebars.compile(source)(payload),
         });
     } catch (error) {
-        console.error('Error sending email:', error.message);
+        log.error('email_failed', 'Could not send email', errorType(error));
         throw error;
     }
 };

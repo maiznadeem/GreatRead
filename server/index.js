@@ -1,4 +1,11 @@
 require('dotenv').config({ quiet: true });
+const { log, errorFields, requestLog } = require('./utils/log.js');
+
+// Same outcome as Node's default (the process exits), but logged as one structured line first.
+process.on('unhandledRejection', (err) => {
+    log.error('exception', 'Unhandled promise rejection', errorFields(err));
+    process.exit(1);
+});
 
 // On Cloud Run all secrets arrive in one Secret Manager secret, mounted as APP_SECRETS (a JSON object of strings).
 if (process.env.APP_SECRETS) {
@@ -9,7 +16,7 @@ if (process.env.APP_SECRETS) {
 const REQUIRED_ENV = ['SESSION_SECRET', 'MONGO_DB_URL', 'STRIPE_PRIVATE_KEY', 'STRIPE_WEBHOOK_SECRET'];
 const missingEnv = REQUIRED_ENV.filter((name) => !process.env[name]);
 if (missingEnv.length) {
-    console.error(`Missing required environment variables: ${missingEnv.join(', ')}`);
+    log.error('config_missing', 'Missing required environment variables', { names: missingEnv });
     process.exit(1);
 }
 
@@ -39,6 +46,9 @@ app.disable('x-powered-by');
 // Google's front end appends the real client IP as the last X-Forwarded-For entry and sets
 // X-Forwarded-Proto, so trust exactly one hop: earlier (client-supplied) entries are ignored.
 app.set('trust proxy', 1);
+
+// One structured line per request (OracleVMOps LOGGING.md), including the ones refused below.
+app.use(requestLog);
 
 // Only traffic that came through the Cloudflare Worker (WAF) is served; this also sets req.ip to the visitor.
 app.use(originAuth);
@@ -87,7 +97,7 @@ app.use(['/auth', '/admin'], (req, res, next) => {
 const mongoClientPromise = mongoose
     .connect(process.env.MONGO_DB_URL)
     .then((m) => {
-        console.log('Connected to MongoDB');
+        log.info('db_connected', 'Connected to MongoDB');
         return m.connection.getClient();
     });
 
@@ -124,7 +134,7 @@ app.use((err, req, res, next) => {
     // body-parser errors can echo parts of the request body, so give them fixed messages.
     const bodyError = typeof err.type === 'string' && err.type.startsWith('entity.');
     const status = err.name === 'MulterError' ? 400 : err.status || err.statusCode || 500;
-    if (status >= 500) console.error(err);
+    if (status >= 500) log.error('exception', 'Unhandled error', { ray: req.get('cf-ray'), method: req.method, route: req.route ? `${req.baseUrl}${req.route.path}` : '(unmatched)', ...errorFields(err) });
     const body = {
         error: status >= 500 ? 'Internal server error' : bodyError ? 'Invalid request body.' : err.message,
     };
@@ -135,10 +145,10 @@ app.use((err, req, res, next) => {
 mongoClientPromise
     .then(() => {
         app.listen(process.env.PORT || 8080, () => {
-            console.log(`Server is running on port ${process.env.PORT || 8080}`);
+            log.info('startup', 'Server is running', { port: Number(process.env.PORT || 8080) });
         });
     })
     .catch((err) => {
-        console.error('Error connecting to MongoDB:', err);
+        log.error('exception', 'Could not connect to MongoDB', errorFields(err));
         process.exit(1);
     });

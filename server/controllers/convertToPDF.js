@@ -3,6 +3,7 @@ const fs = require('fs/promises');
 const os = require('os');
 const path = require('path');
 const { pathToFileURL } = require('url');
+const { log, errorFields } = require('../utils/log.js');
 
 // LibreOffice (installed in the server image, see Dockerfile) converts ./assets/<name>.docx to ./assets/<name>.pdf.
 const SOFFICE = process.env.SOFFICE_PATH || 'soffice';
@@ -48,7 +49,7 @@ const convertNow = async (filename) => {
         // soffice can exit 0 without writing anything (e.g. an unreadable input), so check the result.
         await fs.access(output);
     } catch (err) {
-        console.log("Error occurred during conversion:", err);
+        log.error('pdf_failed', 'PDF conversion failed', errorFields(err));
         throw err;
     } finally {
         await fs.rm(profile, { recursive: true, force: true });
