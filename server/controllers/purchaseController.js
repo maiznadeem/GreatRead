@@ -11,6 +11,7 @@ const Category = require("../models/Category");
 const Payment = require("../models/Payment");
 
 const { convert } = require("./convertToPDF");
+const { log, errorFields } = require('../utils/log.js');
 
 const CLAIM_TTL_MS = 10 * 60 * 1000;
 
@@ -101,7 +102,7 @@ const authorizePurchase = async (req, res) => {
 
         res.json({ url: session.url });
     } catch (error) {
-        console.error(error);
+        log.error('purchase_failed', 'Purchase failed', errorFields(error));
         res.status(500).json({ error: "There's an error on our side." });
     }
 }
@@ -161,12 +162,12 @@ const getWordDocument = async ({ previewOps, bookIds }) => {
             const imageBuffer = await axios.get(book.image, { responseType: 'arraybuffer', timeout: 15000, maxContentLength: 10 * 1024 * 1024 })
                 .then(response => Buffer.from(response.data, 'binary'))
                 .catch(error => {
-                    console.error("Error fetching image:", error);
+                    log.warn('image_fetch_failed', 'Could not fetch book image', errorFields(error));
                     return null;
                 });
 
             if (!imageBuffer) {
-                console.error("Failed to fetch image from URL:", book.image);
+                log.warn('image_fetch_failed', 'Book image request failed', { image: book.image });
                 return;
             }
 
@@ -485,7 +486,7 @@ const getWordDocument = async ({ previewOps, bookIds }) => {
         return fileUrls;
 
     } catch (error) {
-        console.error('Error retrieving file:', error);
+        log.error('file_retrieve_failed', 'Could not retrieve purchased file', errorFields(error));
         return [];
     }
 
@@ -542,7 +543,7 @@ async function uploadDocs(filename) {
 
         return [...docxSignedUrl, ...pdfSignedUrl];
     } catch (error) {
-        console.error('Error uploading files:', error);
+        log.error('upload_failed', 'Could not upload purchased files', errorFields(error));
         throw error;
     }
 }

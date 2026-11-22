@@ -74,6 +74,12 @@ and Liberation fonts are installed there).
 - **Bot protection:** reCAPTCHA Enterprise (score-based, no checkbox) guards admin login, forgot and reset password
   and the public purchase POST (`server/utils/recaptcha.js`): minimum score 0.3, tokens only from the production
   hostnames, fail-open on Google outages (logged). Kill switch: Cloud Run env `RECAPTCHA_ENABLED=false`.
+- **Logs:** the API (`server/utils/log.js`) and the API edge Worker write one JSON object per line, per the shared
+  logging standard (`LOGGING.md` in the private ops repo): `time`, `level`, `app`, `part` (`api` or `edge`), `event`,
+  `ray`, `msg`, plus `method`, `route` (the matched route pattern, never the raw URL), `status` and `ms` on request
+  lines. The edge forwards Cloudflare's `CF-Ray` to the API, so one ray finds a request in both. Health checks and
+  preflights log at `debug`; every 5xx and exception at `error` with `event=exception`. Bodies, cookies, tokens and
+  emails are never logged. Set `LOG_LEVEL` (default `info`). Cloud Logging and the owner's status page both parse it.
 - **Google Cloud access:** the API's service account has only Storage Object Admin on the two buckets plus Token
   Creator on itself (to sign download URLs). It has no keys.
 - **Images:** uploads are re-encoded with `sharp` (`server/utils/images.js`): covers become JPEG up to 600×900

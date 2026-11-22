@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { log, errorFields } = require('./log.js');
 
 const COLLECTION = 'rateLimits';
 
@@ -65,7 +66,7 @@ class MongoRateLimitStore {
                 .createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })
                 .catch((error) => {
                     MongoRateLimitStore.indexPromise = null;
-                    console.error('Could not create the rateLimits TTL index:', error.message);
+                    log.error('rate_limit_index_failed', 'Could not create the rateLimits TTL index', errorFields(error));
                 });
         }
         return MongoRateLimitStore.indexPromise;

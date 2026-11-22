@@ -1,6 +1,7 @@
 const stripe = require('../utils/stripe');
 const Payment = require('../models/Payment');
 const { fulfillPayment } = require('../controllers/purchaseController');
+const { log, errorFields, errorType } = require('../utils/log.js');
 
 const PAID_EVENTS = ['checkout.session.completed', 'checkout.session.async_payment_succeeded'];
 
@@ -10,7 +11,7 @@ const stripeWebhook = async (req, res) => {
     try {
         event = stripe.webhooks.constructEvent(req.body, req.headers['stripe-signature'], process.env.STRIPE_WEBHOOK_SECRET);
     } catch (err) {
-        console.error('Error verifying webhook signature:', err.message);
+        log.warn('webhook_signature_invalid', 'Stripe webhook signature did not verify', errorType(err));
         return res.sendStatus(400);
     }
 
@@ -24,16 +25,16 @@ const stripeWebhook = async (req, res) => {
             );
             if (payment) {
                 await fulfillPayment(payment);
-                console.log('Payment successful. Session ID:', session.id);
+                log.info('payment_succeeded', 'Payment successful', { session: session.id });
             } else {
-                console.log('Payment not found. Session ID:', session.id);
+                log.warn('payment_not_found', 'Payment not found for Stripe session', { session: session.id });
             }
         } else {
-            console.log('Unhandled event type:', event.type);
+            log.debug('webhook_unhandled', 'Unhandled Stripe event type', { type: event.type });
         }
         res.sendStatus(200);
     } catch (error) {
-        console.error('Error handling webhook event:', error.message);
+        log.error('webhook_failed', 'Could not handle Stripe webhook event', errorFields(error));
         res.sendStatus(500);
     }
 };

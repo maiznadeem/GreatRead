@@ -5,6 +5,7 @@ const crypto = require("crypto");
 const bcrypt = require("bcrypt");
 const mongoose = require("mongoose");
 const { ADMIN_URL } = require("../utils/config");
+const { log, errorFields, errorType } = require('../utils/log.js');
 
 const bcryptSalt = Number(process.env.BCRYPT_SALT) || 10;
 // Compared against when the email is unknown so login takes about as long either way.
@@ -75,14 +76,14 @@ const resetPassword = async (userId, token, password) => {
     try {
         await mongoose.connection.collection("sessions").deleteMany({ session: { $regex: `"userId":"${userId.toLowerCase()}"` } });
     } catch (error) {
-        console.error("Error clearing sessions after password reset:", error.message);
+        log.error('sessions_clear_failed', 'Could not clear sessions after password reset', errorFields(error));
     }
 
     try {
         const user = await User.findById(userId);
         await sendEmail(user.email, "Password Reset Successfully", { name: user.name }, "./template/resetPassword");
     } catch (error) {
-        console.error("Error sending password reset confirmation:", error.message);
+        log.error('email_failed', 'Could not send password reset confirmation', errorType(error));
     }
     return { message: "Password reset was successful" };
 };

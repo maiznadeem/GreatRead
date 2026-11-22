@@ -2,6 +2,7 @@ const express = require('express');
 const { authenticate, requestPasswordReset, resetPassword } = require('../services/authService');
 const { requireAuth } = require('../utils/requireAuth');
 const { requireRecaptcha } = require('../utils/recaptcha');
+const { log, errorFields, errorType } = require('../utils/log.js');
 const {
     loginIpLimiter, loginEmailLimiter, forgotIpLimiter, forgotEmailLimiter, resetLimiter,
 } = require('../utils/rateLimiters');
@@ -42,7 +43,7 @@ authRoute.post('/logout', async (req, res) => {
     try {
         await call(req.session.destroy.bind(req.session));
     } catch (error) {
-        console.error('Error destroying session:', error.message);
+        log.warn('session_destroy_failed', 'Could not destroy session', errorFields(error));
     }
     res.clearCookie('greatread.sid', { httpOnly: true, secure: 'auto', sameSite: 'strict' });
     res.status(204).end();
@@ -56,7 +57,7 @@ authRoute.post('/password/forgot', forgotIpLimiter, forgotEmailLimiter, requireR
     // Always answers after exactly FORGOT_RESPONSE_MS, so timing never reveals whether the account exists.
     // The email send runs meanwhile (it normally takes 1-2 s); Cloud Run throttles CPU after the response,
     // so a send that is still running then may be delayed.
-    requestPasswordReset(email).catch((error) => console.error('Error requesting password reset:', error.message));
+    requestPasswordReset(email).catch((error) => log.error('password_reset_failed', 'Password reset request failed', errorType(error)));
     await sleep(FORGOT_RESPONSE_MS);
     res.json({ message: GENERIC_MESSAGE });
 });
@@ -67,7 +68,7 @@ authRoute.post('/password/reset', resetLimiter, requireRecaptcha('reset_password
         res.json(await resetPassword(userId, token, password));
     } catch (error) {
         if (error.status === 400) return res.status(400).json({ error: error.message });
-        console.error('Error resetting password:', error.message);
+        log.error('password_reset_failed', 'Password reset failed', errorType(error));
         res.status(500).json({ error: 'An error occurred. Please try again.' });
     }
 });

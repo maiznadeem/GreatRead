@@ -9,6 +9,7 @@ const Book = require('../models/Book');
 const TopPicks = require('../models/TopPicks');
 const Category = require('../models/Category');
 const Note = require('../models/Note');
+const { log, errorFields } = require('../utils/log.js');
 
 const PUBLIC_URL_PREFIX = `https://storage.googleapis.com/${BOOKS_BUCKET}/`;
 const DEFAULT_PAGE_SIZE = 24;
@@ -63,7 +64,7 @@ async function deleteImage(imageUrl) {
     try {
         await storage.bucket(BOOKS_BUCKET).file(imageUrl.slice(PUBLIC_URL_PREFIX.length)).delete({ ignoreNotFound: true });
     } catch (error) {
-        console.error('Could not delete image', imageUrl, error.message);
+        log.warn('image_delete_failed', 'Could not delete image', { image: imageUrl, ...errorFields(error) });
     }
 }
 
@@ -215,7 +216,7 @@ async function deleteBook(req, res) {
         throw new HttpError(409, 'This book is a current top pick. Replace it in Top picks first.', 'TOP_PICK');
     }
     await Book.deleteOne({ _id: id });
-    if (existing.notes) await Note.deleteOne({ _id: existing.notes }).catch((e) => console.error('Could not delete note:', e.message));
+    if (existing.notes) await Note.deleteOne({ _id: existing.notes }).catch((e) => log.warn('note_delete_failed', 'Could not delete note', errorFields(e)));
     await deleteImage(existing.image);
     res.json({ message: 'Book deleted.' });
 }

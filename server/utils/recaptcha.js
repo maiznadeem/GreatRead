@@ -1,5 +1,6 @@
 const { GoogleAuth } = require('google-auth-library');
 const { recaptcha } = require('./config');
+const { log, errorFields } = require('./log.js');
 
 const auth = new GoogleAuth({ scopes: 'https://www.googleapis.com/auth/cloud-platform' });
 const REJECTED = 'We could not verify this request. Please refresh the page and try again.';
@@ -40,7 +41,7 @@ const requireRecaptcha = (action) => async (req, res, next) => {
     if (!recaptcha.enabled) return next();
 
     if (typeof token !== 'string' || !token || token.length > MAX_TOKEN_LENGTH) {
-        console.warn(`reCAPTCHA rejected ${action}: missing or oversized token`);
+        log.warn('recaptcha_rejected', `reCAPTCHA rejected ${action}: missing or oversized token`, { action, ray: req.get('cf-ray') });
         return res.status(403).json({ error: REJECTED });
     }
 
@@ -51,16 +52,16 @@ const requireRecaptcha = (action) => async (req, res, next) => {
         // 400/413 could come from what the client sent, so they fail closed. Timeouts, 5xx, quota (429) and our own
         // credential errors (401/403) can't be caused by the client: fail open so the admin isn't locked out.
         if (CLIENT_ERRORS.has(error.status)) {
-            console.warn(`reCAPTCHA rejected ${action}: Google returned ${error.message}`);
+            log.warn('recaptcha_rejected', `reCAPTCHA rejected ${action}: Google returned ${error.status}`, { action, ray: req.get('cf-ray') });
             return res.status(403).json({ error: REJECTED });
         }
-        console.error(`reCAPTCHA check failed for ${action}, allowing request:`, error.message);
+        log.error('recaptcha_unavailable', `reCAPTCHA check failed for ${action}, allowing request`, { action, ray: req.get('cf-ray'), status: error.status, ...errorFields(error) });
         return next();
     }
 
     const reason = rejection(assessment, action);
     if (reason) {
-        console.warn(`reCAPTCHA rejected ${action}: ${reason}, score ${assessment.riskAnalysis?.score}`);
+        log.warn('recaptcha_rejected', `reCAPTCHA rejected ${action}: ${reason}`, { action, reason, score: assessment.riskAnalysis?.score, ray: req.get('cf-ray') });
         return res.status(403).json({ error: REJECTED });
     }
     next();
