@@ -1,5 +1,6 @@
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const { MongoRateLimitStore } = require('./rateLimitStore');
+const { rateLimitLogger } = require('./log.js');
 
 const MINUTE = 60 * 1000;
 const HOUR = 60 * MINUTE;
@@ -17,6 +18,7 @@ const makeLimiter = ({ name, windowMs, limit, message, passOnStoreError, keyGene
         standardHeaders: 'draft-7',
         legacyHeaders: false,
         passOnStoreError,
+        logger: rateLimitLogger,
         store: new MongoRateLimitStore({ prefix: name }),
         keyGenerator: keyGenerator || ((req) => ipKeyGenerator(req.ip)),
         skip,

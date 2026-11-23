@@ -32,8 +32,20 @@ const errorType = (err) => ({ error: err?.name ?? typeof err });
 // Worker's own call to this origin a new CF-Ray; CF-Ray is the fallback for anything that reaches us directly.
 const rayOf = (req) => req.get('x-cf-ray') || req.get('cf-ray');
 
+// Express resets req.baseUrl when a router hands an error on, so routers record their prefix here first.
+const markRouteBase = (req, res, next) => {
+    req.routeBase = req.baseUrl;
+    next();
+};
+
 // The route pattern Express matched (never the raw URL, which can carry ids and tokens).
-const routeOf = (req) => (req.route ? `${req.baseUrl}${req.route.path}` : '(unmatched)');
+const routeOf = (req) => (req.route ? `${req.routeBase ?? req.baseUrl}${req.route.path}` : '(unmatched)');
+
+// For express-rate-limit's `logger` option, so store errors are JSON lines too, not plain stderr.
+const rateLimitLogger = {
+    error: (err, message) => write('error', 'rate_limit_error', message || 'Rate limit store error', errorFields(err)),
+    warn: (err, message) => write('warn', 'rate_limit_warning', message || 'Rate limit warning', errorType(err)),
+};
 
 // One line per request when the response finishes. Health checks and preflights at debug, 5xx at error.
 const requestLog = (req, res, next) => {
@@ -54,4 +66,4 @@ const requestLog = (req, res, next) => {
     next();
 };
 
-module.exports = { log, errorFields, errorType, requestLog, rayOf };
+module.exports = { log, errorFields, errorType, requestLog, rayOf, routeOf, markRouteBase, rateLimitLogger };
