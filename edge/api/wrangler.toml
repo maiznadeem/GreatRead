@@ -14,3 +14,10 @@ ORIGIN = "https://great-read-maiz-portfolio-913220110827.us-central1.run.app"
 
 [observability]
 enabled = true
+# Cloudflare attaches the request URL to every log event; strip its query, which can carry tokens and search terms.
+redact_query_string = true
+
+# Only the Worker's own JSON line (LOGGING.md). Cloudflare's per-request invocation log repeats it and records the
+# full URL, query included.
+[observability.logs]
+invocation_logs = false
