@@ -28,6 +28,10 @@ const log = {
 const errorFields = (err) => ({ error: err?.name ?? typeof err, stack: err?.stack ?? String(err) });
 const errorType = (err) => ({ error: err?.name ?? typeof err });
 
+// Cloudflare's ray for the visitor's request. The edge Worker passes it as X-CF-Ray, because Cloudflare gives the
+// Worker's own call to this origin a new CF-Ray; CF-Ray is the fallback for anything that reaches us directly.
+const rayOf = (req) => req.get('x-cf-ray') || req.get('cf-ray');
+
 // The route pattern Express matched (never the raw URL, which can carry ids and tokens).
 const routeOf = (req) => (req.route ? `${req.baseUrl}${req.route.path}` : '(unmatched)');
 
@@ -39,7 +43,7 @@ const requestLog = (req, res, next) => {
         const quiet = req.method === 'OPTIONS' || (req.method === 'GET' && route === '/');
         const level = res.statusCode >= 500 ? 'error' : quiet ? 'debug' : 'info';
         write(level, 'request', `${req.method} ${route} ${res.statusCode}`, {
-            ray: req.get('cf-ray'),
+            ray: rayOf(req),
             method: req.method,
             route,
             status: res.statusCode,
@@ -50,4 +54,4 @@ const requestLog = (req, res, next) => {
     next();
 };
 
-module.exports = { log, errorFields, errorType, requestLog };
+module.exports = { log, errorFields, errorType, requestLog, rayOf };

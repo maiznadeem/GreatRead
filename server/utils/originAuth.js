@@ -1,5 +1,5 @@
 const { timingSafeEqual } = require('crypto');
-const { log } = require('./log.js');
+const { log, rayOf } = require('./log.js');
 
 // The public API hostname is a Cloudflare Worker (WAF in front) that forwards to this Cloud Run service with
 // X-Origin-Auth set to a shared secret and X-Client-IP set to the visitor's address. Requests that skip
@@ -27,7 +27,7 @@ const originAuth = (req, res, next) => {
         return next();
     }
     if (!enforce) {
-        log.warn('origin_auth_missing', 'Origin auth missing (log only)', { method: req.method, ray: req.get('cf-ray') });
+        log.warn('origin_auth_missing', 'Origin auth missing (log only)', { method: req.method, ray: rayOf(req) });
         return next();
     }
     res.status(403).json({ error: 'Forbidden' });

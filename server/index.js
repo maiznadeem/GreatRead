@@ -1,5 +1,5 @@
 require('dotenv').config({ quiet: true });
-const { log, errorFields, requestLog } = require('./utils/log.js');
+const { log, errorFields, requestLog, rayOf } = require('./utils/log.js');
 
 // Same outcome as Node's default (the process exits), but logged as one structured line first.
 process.on('unhandledRejection', (err) => {
@@ -134,7 +134,7 @@ app.use((err, req, res, next) => {
     // body-parser errors can echo parts of the request body, so give them fixed messages.
     const bodyError = typeof err.type === 'string' && err.type.startsWith('entity.');
     const status = err.name === 'MulterError' ? 400 : err.status || err.statusCode || 500;
-    if (status >= 500) log.error('exception', 'Unhandled error', { ray: req.get('cf-ray'), method: req.method, route: req.route ? `${req.baseUrl}${req.route.path}` : '(unmatched)', ...errorFields(err) });
+    if (status >= 500) log.error('exception', 'Unhandled error', { ray: rayOf(req), method: req.method, route: req.route ? `${req.baseUrl}${req.route.path}` : '(unmatched)', ...errorFields(err) });
     const body = {
         error: status >= 500 ? 'Internal server error' : bodyError ? 'Invalid request body.' : err.message,
     };
